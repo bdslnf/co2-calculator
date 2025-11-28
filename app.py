@@ -10,17 +10,8 @@ import plotly.graph_objects as go
 from pathlib import Path
 import sys
 
-# ROOT wird nicht mehr benötigt für Imports
-ROOT = Path(__file__).resolve().parent  # Nur für Datenpfade
-
-# sys.path.insert(...) komplett LÖSCHEN!
-
-from emissionen import (
-    validiere_eingabedaten,
-    berechne_emissionen,
-    aggregiere_jaehrlich,
-    KBOB_FAKTOREN
-)
+# Pfad für Datenzugriff
+ROOT = Path(__file__).resolve().parent
 
 from emissionen import (
     validiere_eingabedaten,
@@ -198,15 +189,6 @@ def zeige_sanierungsszenarien(gebaeude):
         default=szenarien_df["kategorie"].unique()
     )
     
-     # Filter-Optionen
-    st.sidebar.subheader("🔧 Filter")
-    
-    kategorie_filter = st.sidebar.multiselect(
-        "Kategorie",
-        options=szenarien_df["kategorie"].unique(),
-        default=szenarien_df["kategorie"].unique()
-    )
-    
     max_investition = st.sidebar.number_input(
         "Max. Investition [CHF]",
         min_value=0,
@@ -215,7 +197,7 @@ def zeige_sanierungsszenarien(gebaeude):
         step=10000,
         format="%d"
     )
-st.sidebar.caption(f"Max: CHF {szenarien_df['investition_netto_chf'].max():,.0f}")
+    st.sidebar.caption(f"💡 Max: CHF {szenarien_df['investition_netto_chf'].max():,.0f}")
     
     # Filtern
     szenarien_gefiltert = szenarien_df[
