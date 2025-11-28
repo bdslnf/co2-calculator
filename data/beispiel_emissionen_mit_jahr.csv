@@ -1,0 +1,56 @@
+gebaeude_id,jahr,heizung_typ,jahresverbrauch_kwh,strom_kwh_jahr,flaeche_m2,baujahr
+MFH_Hauptstrasse_12,2020,Gas,180000,45000,1200,1975
+MFH_Hauptstrasse_12,2021,Gas,175000,46000,1200,1975
+MFH_Hauptstrasse_12,2022,Gas,170000,45500,1200,1975
+MFH_Hauptstrasse_12,2023,Gas,168000,46200,1200,1975
+MFH_Hauptstrasse_12,2024,Gas,165000,46500,1200,1975
+MFH_Bahnhofstr_5,2020,Öl,220000,38000,1400,1968
+MFH_Bahnhofstr_5,2021,Öl,215000,39000,1400,1968
+MFH_Bahnhofstr_5,2022,Öl,210000,38500,1400,1968
+MFH_Bahnhofstr_5,2023,Öl,208000,39200,1400,1968
+MFH_Bahnhofstr_5,2024,Öl,205000,39500,1400,1968
+MFH_Parkweg_88,2020,Fernwärme,95000,42000,950,2010
+MFH_Parkweg_88,2021,Fernwärme,92000,42500,950,2010
+MFH_Parkweg_88,2022,Fernwärme,90000,43000,950,2010
+MFH_Parkweg_88,2023,Fernwärme,88000,43200,950,2010
+MFH_Parkweg_88,2024,Fernwärme,86000,43500,950,2010
+EFH_Seestr_23,2020,Gas,25000,4500,180,1985
+EFH_Seestr_23,2021,Gas,24000,4600,180,1985
+EFH_Seestr_23,2022,Gas,23500,4550,180,1985
+EFH_Seestr_23,2023,Wärmepumpe,8500,7200,180,1985
+EFH_Seestr_23,2024,Wärmepumpe,8200,7100,180,1985
+MFH_Lindenweg_14,2020,Gas,155000,40000,1100,1982
+MFH_Lindenweg_14,2021,Gas,150000,40500,1100,1982
+MFH_Lindenweg_14,2022,Gas,148000,41000,1100,1982
+MFH_Lindenweg_14,2023,Gas,145000,41200,1100,1982
+MFH_Lindenweg_14,2024,Gas,143000,41500,1100,1982
+```
+
+---
+
+### **SCHRITT 4: Speichern**
+
+**Scrolle nach unten**
+
+**"Commit changes"** (grüner Button)
+
+---
+
+### **SCHRITT 5: Alte CSV löschen**
+
+**Zurück zur Hauptseite**
+
+**Klicke auf:** `beispiel_emissionen_mit_jahr.csv` (die im Root)
+
+**Oben rechts: 🗑️ Mülleimer** → "Delete file" → "Commit changes"
+
+---
+
+## ✅ DANN HAST DU:
+```
+co2-calculator/
+├── app.py
+├── data/
+│   └── beispiel_emissionen_mit_jahr.csv  ✅
+├── requirements.txt
+└── ...
