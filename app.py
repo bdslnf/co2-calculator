@@ -10,9 +10,17 @@ import plotly.graph_objects as go
 from pathlib import Path
 import sys
 
-# Pfad zu src hinzufügen
-ROOT = Path(__file__).resolve().parents
-sys.path.insert(0, str(ROOT / "src"))
+# ROOT wird nicht mehr benötigt für Imports
+ROOT = Path(__file__).resolve().parent  # Nur für Datenpfade
+
+# sys.path.insert(...) komplett LÖSCHEN!
+
+from emissionen import (
+    validiere_eingabedaten,
+    berechne_emissionen,
+    aggregiere_jaehrlich,
+    KBOB_FAKTOREN
+)
 
 from emissionen import (
     validiere_eingabedaten,
