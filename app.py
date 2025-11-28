@@ -198,12 +198,15 @@ def zeige_sanierungsszenarien(gebaeude):
         default=szenarien_df["kategorie"].unique()
     )
     
-    max_investition = st.sidebar.slider(
-        "Max. Investition [CHF]",
-        0,
-        int(szenarien_df["investition_netto_chf"].max()),
-        int(szenarien_df["investition_netto_chf"].max())
-    )
+  max_investition = st.sidebar.number_input(
+    "Max. Investition [CHF]",
+    min_value=0,
+    max_value=int(szenarien_df["investition_netto_chf"].max()),
+    value=int(szenarien_df["investition_netto_chf"].max()),
+    step=10000,
+    format="%d"
+)
+st.sidebar.caption(f"Max: CHF {szenarien_df['investition_netto_chf'].max():,.0f}")
     
     # Filtern
     szenarien_gefiltert = szenarien_df[
