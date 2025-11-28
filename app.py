@@ -11,7 +11,7 @@ from pathlib import Path
 import sys
 
 # Pfad zu src hinzufügen
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents
 sys.path.insert(0, str(ROOT / "src"))
 
 from emissionen import (
