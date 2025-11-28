@@ -423,7 +423,7 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.info("""
     **HSLU Digital Twin Programming**  
-    Nicola Beeli, Manuel Flühler, Domenic Zogg, Fabrice Bachofner Sarn
+    Nicola Beeli, Mattia Rohrer
     """)
 
 
