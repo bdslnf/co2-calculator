@@ -212,37 +212,57 @@ def zeige_sanierungsszenarien(gebaeude):
         key="kategorie_filter_unique"
     )
     
-    # Max. Investition mit Number Input + Slider
+    # Max. Investition mit formatiertem Text Input + Slider
     st.sidebar.markdown("### 💰 Max. Investition")
     
-    # Number Input (ohne Apostrophe)
-    max_inv_input = st.sidebar.number_input(
+    # Session State initialisieren
+    if 'max_investition_wert' not in st.session_state:
+        st.session_state.max_investition_wert = 100000
+    
+    # Text Input mit automatischer Formatierung
+    current_formatted = format_number_swiss(st.session_state.max_investition_wert)
+    
+    text_input = st.sidebar.text_input(
         "Betrag eingeben [CHF]:",
-        min_value=0,
-        max_value=2000000,
-        value=100000,
-        step=10000,
-        format="%d",
-        key="max_inv_number_input",
-        help="Eingabe: 100000 (Anzeige unten mit Apostrophen)"
+        value=current_formatted,
+        key="max_inv_text_input",
+        help="Eingabe mit oder ohne Apostrophe: 100000 oder 100'000"
     )
     
+    # Parse die Eingabe
+    parsed_value = parse_swiss_number(text_input)
+    if parsed_value != st.session_state.max_investition_wert:
+        st.session_state.max_investition_wert = min(max(0, parsed_value), 2000000)
+        st.rerun()
+    
     # Slider (synchronisiert)
-    max_investition = st.sidebar.slider(
+    slider_value = st.sidebar.slider(
         "Oder per Slider:",
         min_value=0,
         max_value=2000000,
-        value=max_inv_input,
+        value=st.session_state.max_investition_wert,
         step=10000,
-        key="max_inv_slider"
+        key="max_inv_slider",
+        format="%d"
     )
     
-    # GROSSE FORMATIERTE ANZEIGE mit Apostrophen
-    formatted_display = format_number_swiss(max_investition)
-    st.sidebar.success(f"### CHF {formatted_display}")
+    # Update bei Slider-Aenderung
+    if slider_value != st.session_state.max_investition_wert:
+        st.session_state.max_investition_wert = slider_value
+        st.rerun()
     
-    # Zusätzliche Info
-    st.sidebar.caption(f"💡 Bereich: 0 - {format_number_swiss(2000000)} CHF")
+    # Finale Variable
+    max_investition = st.session_state.max_investition_wert
+    
+    # Grosse formatierte Anzeige
+    formatted_display = format_number_swiss(max_investition)
+    st.sidebar.success(f"**Gewählt: CHF {formatted_display}**")
+    
+    # Slider-Wert mit Apostrophen anzeigen
+    slider_min_formatted = format_number_swiss(0)
+    slider_max_formatted = format_number_swiss(2000000)
+    slider_current_formatted = format_number_swiss(max_investition)
+    st.sidebar.caption(f"📊 Bereich: {slider_min_formatted} - {slider_max_formatted} CHF")
     
     # Filtern
     szenarien_gefiltert = szenarien_df[
@@ -476,27 +496,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
-
----
-
-## ✅ LÖSUNG: GROSSE ANZEIGE STATT TEXT INPUT MIT APOSTROPHEN
-
-**Das Problem:** Streamlit's Text Input kann **NICHT** automatisch während des Tippens formatieren ohne den Cursor zu verschieben.
-
-**Meine Lösung:**
-1. **Number Input** (ohne Apostrophe): Zum Eingeben
-2. **Slider** (synchronisiert): Zum Verstellen
-3. **GROSSE formatierte Anzeige** (Zeile 257): Mit Apostrophen!
-```
-💰 Max. Investition
-
-Betrag eingeben [CHF]:
-100000  [-] [+]
-
-Oder per Slider:
-├────●─────────┤
-
-### CHF 750'000  ← GROSS MIT APOSTROPHEN!
-
-💡 Bereich: 0 - 2'000'000 CHF
