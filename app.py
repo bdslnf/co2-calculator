@@ -64,6 +64,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+def format_chf(value):
+    """Formatiert Zahlen im Schweizer Format mit Apostroph."""
+    return f"{value:,.0f}".replace(",", "'")
+
+
 def lade_daten():
     """Lädt Daten aus CSV oder nutzt Demo-Daten."""
     data_path = ROOT / "data" / "beispiel_emissionen_mit_jahr.csv"
@@ -203,11 +208,12 @@ def zeige_sanierungsszenarien(gebaeude):
     # Max. Investition mit Input + Slider + Formatierung
     st.sidebar.markdown("### 💰 Max. Investition")
     
-    # Formatierte Anzeige ZUERST (prominent)
+    # Session State initialisieren
     if 'max_investition_wert' not in st.session_state:
         st.session_state.max_investition_wert = 100000
     
-    formatted_display = f"{st.session_state.max_investition_wert:,}".replace(",", "'")
+    # Formatierte Anzeige ZUERST (prominent)
+    formatted_display = format_chf(st.session_state.max_investition_wert)
     st.sidebar.markdown(f'<div class="big-number">CHF {formatted_display}</div>', unsafe_allow_html=True)
     
     # Number Input für direkte Eingabe
@@ -219,10 +225,10 @@ def zeige_sanierungsszenarien(gebaeude):
         step=10000,
         format="%d",
         key="max_inv_number_input",
-        help="Format: 100000 = CHF 100'000"
+        help="Eingabe ohne Apostroph, z.B. 100000 für CHF 100'000"
     )
     
-    # Update Session State
+    # Update Session State bei Änderung
     if max_inv_input != st.session_state.max_investition_wert:
         st.session_state.max_investition_wert = max_inv_input
         st.rerun()
@@ -234,11 +240,10 @@ def zeige_sanierungsszenarien(gebaeude):
         max_value=2000000,
         value=st.session_state.max_investition_wert,
         step=10000,
-        key="max_inv_slider",
-        format="CHF %d"
+        key="max_inv_slider"
     )
     
-    # Update Session State
+    # Update Session State bei Änderung
     if max_inv_slider != st.session_state.max_investition_wert:
         st.session_state.max_investition_wert = max_inv_slider
         st.rerun()
@@ -263,9 +268,8 @@ def zeige_sanierungsszenarien(gebaeude):
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                # Formatierung mit Apostrophen
-                inv_formatted = f"{row['investition_netto_chf']:,.0f}".replace(",", "'")
-                foerd_formatted = f"{row['foerderung_chf']:,.0f}".replace(",", "'")
+                inv_formatted = format_chf(row['investition_netto_chf'])
+                foerd_formatted = format_chf(row['foerderung_chf'])
                 st.metric("Investition (netto)", f"CHF {inv_formatted}")
                 st.metric("Förderung", f"CHF {foerd_formatted}")
             
@@ -274,7 +278,7 @@ def zeige_sanierungsszenarien(gebaeude):
                 st.metric("Amortisation", f"{row['amortisation_jahre']:.1f} Jahre")
             
             with col3:
-                npv_formatted = f"{row['npv_chf']:,.0f}".replace(",", "'")
+                npv_formatted = format_chf(row['npv_chf'])
                 st.metric("ROI", f"{row['roi_prozent']:.1f}%")
                 st.metric("NPV", f"CHF {npv_formatted}")
             
@@ -291,10 +295,10 @@ def zeige_sanierungsszenarien(gebaeude):
     vergleich_df["co2_einsparung_t_jahr"] = vergleich_df["co2_einsparung_kg_jahr"] / 1000
     vergleich_df = vergleich_df.drop("co2_einsparung_kg_jahr", axis=1)
     
-    # Formatierung für Anzeige (mit Apostrophen)
+    # Formatierung für Anzeige
     vergleich_df_display = vergleich_df.copy()
     vergleich_df_display["investition_netto_chf"] = vergleich_df_display["investition_netto_chf"].apply(
-        lambda x: f"CHF {x:,.0f}".replace(",", "'")
+        lambda x: f"CHF {format_chf(x)}"
     )
     
     st.dataframe(
@@ -482,46 +486,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
-
----
-
-## ✅ NEUE FEATURES:
-
-### **1. GROẞE FORMATIERTE ANZEIGE OBEN** 
-```
-╔════════════════════════╗
-║    CHF 100'000         ║  ← GROSS, BLAU, PROMINENT!
-╚════════════════════════╝
-```
-
-### **2. NUMBER INPUT mit Hilfstext**
-```
-Betrag direkt eingeben:
-┌────────────────┐
-│ 100000  [-][+] │
-└────────────────┘
-💡 Format: 100000 = CHF 100'000
-```
-
-### **3. SLIDER mit CHF-Anzeige**
-```
-Oder mit Slider:
-├─────●─────────┤
-CHF 0    CHF 2000000
-```
-
-### **4. BEISPIELE unten**
-```
-💡 Beispiele: 50'000 | 100'000 | 500'000 | 1'000'000
-```
-
-### **5. SYNCHRONISATION mit Session State**
-- Änderst du Number Input → Update überall
-- Änderst du Slider → Update überall
-- Große Anzeige zeigt immer aktuellen Wert mit Apostrophen
-
-### **6. APOSTROPHE in Tabelle**
-```
-CHF 24'000  ← statt CHF 24,000
-CHF 100'000 ← statt CHF 100,000
