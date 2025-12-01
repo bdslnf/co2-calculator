@@ -205,4 +205,241 @@ def zeige_sanierungsszenarien(gebaeude):
         help="Direkt Betrag eingeben oder Slider nutzen"
     )
     
-    # Slider für visuelle Anpas
+    # Slider für visuelle Anpassung (synchronisiert)
+    max_investition = st.sidebar.slider(
+        "Oder per Slider:",
+        min_value=0,
+        max_value=2000000,
+        value=max_inv_input,
+        step=10000,
+        key="max_inv_slider"
+    )
+    
+    # Formatierte Anzeige (Schweizer Format mit Apostroph)
+    formatted = f"{max_investition:,}".replace(",", "'")
+    st.sidebar.success(f"**Budget: CHF {formatted}**")
+    
+    # Filtern
+    szenarien_gefiltert = szenarien_df[
+        (szenarien_df["kategorie"].isin(kategorie_filter)) &
+        (szenarien_df["investition_netto_chf"] <= max_investition)
+    ]
+    
+    # Top-Empfehlungen
+    st.subheader("🏆 Top-3 Empfehlungen")
+    
+    for idx, row in szenarien_gefiltert.head(3).iterrows():
+        with st.expander(f"#{row['rang']}: {row['name']}", expanded=(idx == 0)):
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("Investition (netto)", f"CHF {row['investition_netto_chf']:,.0f}")
+                st.metric("Förderung", f"CHF {row['foerderung_chf']:,.0f}")
+            
+            with col2:
+                st.metric("CO₂-Reduktion", f"{row['co2_einsparung_kg_jahr']/1000:.1f} t/Jahr")
+                st.metric("Amortisation", f"{row['amortisation_jahre']:.1f} Jahre")
+            
+            with col3:
+                st.metric("ROI", f"{row['roi_prozent']:.1f}%")
+                st.metric("NPV", f"CHF {row['npv_chf']:,.0f}")
+            
+            st.write("**Beschreibung:**", row["beschreibung"])
+    
+    # Vergleichstabelle
+    st.subheader("📋 Alle Szenarien im Vergleich")
+    
+    vergleich_df = szenarien_gefiltert[[
+        "rang", "name", "kategorie", "investition_netto_chf",
+        "co2_einsparung_kg_jahr", "amortisation_jahre", "roi_prozent", "prioritaets_score"
+    ]].copy()
+    
+    vergleich_df["co2_einsparung_t_jahr"] = vergleich_df["co2_einsparung_kg_jahr"] / 1000
+    vergleich_df = vergleich_df.drop("co2_einsparung_kg_jahr", axis=1)
+    
+    st.dataframe(
+        vergleich_df.style.format({
+            "investition_netto_chf": "CHF {:,.0f}",
+            "co2_einsparung_t_jahr": "{:.2f}",
+            "amortisation_jahre": "{:.1f}",
+            "roi_prozent": "{:.1f}%",
+            "prioritaets_score": "{:.0f}"
+        }),
+        use_container_width=True
+    )
+    
+    # Visualisierung: Kosten vs. CO₂
+    st.subheader("📈 Kosten-Nutzen-Analyse")
+    
+    fig = px.scatter(
+        szenarien_gefiltert,
+        x="investition_netto_chf",
+        y="co2_einsparung_kg_jahr",
+        size="prioritaets_score",
+        color="kategorie",
+        hover_data=["name", "amortisation_jahre", "roi_prozent"],
+        labels={
+            "investition_netto_chf": "Investition [CHF]",
+            "co2_einsparung_kg_jahr": "CO₂-Reduktion [kg/Jahr]",
+            "kategorie": "Kategorie"
+        },
+        title="Investition vs. CO₂-Reduktion (Größe = Priorität)"
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    return szenarien_gefiltert
+
+
+def zeige_sensitivitaet(gebaeude, sanierung):
+    """Zeigt Sensitivitätsanalyse."""
+    st.header("🔍 Sensitivitätsanalyse")
+    
+    st.write(f"**Massnahme:** {sanierung['name']}")
+    
+    # Parameter auswählen
+    parameter = st.selectbox(
+        "Szenario",
+        ["energiepreis", "co2_abgabe", "foerderung"],
+        format_func=lambda x: {
+            "energiepreis": "Energiepreis-Entwicklung",
+            "co2_abgabe": "CO₂-Abgabe",
+            "foerderung": "Fördergelder"
+        }[x]
+    )
+    
+    # Sensitivität berechnen
+    sens_df = sensitivitaetsanalyse(sanierung, gebaeude, parameter)
+    
+    # Visualisierung
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=sens_df["faktor"],
+        y=sens_df["amortisation_jahre"],
+        mode="lines+markers",
+        name="Amortisation",
+        yaxis="y"
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=sens_df["faktor"],
+        y=sens_df["npv_chf"],
+        mode="lines+markers",
+        name="NPV",
+        yaxis="y2"
+    ))
+    
+    fig.update_layout(
+        title=f"Sensitivität: {parameter}",
+        xaxis_title="Multiplikator (1.0 = Basis)",
+        yaxis_title="Amortisation [Jahre]",
+        yaxis2=dict(
+            title="NPV [CHF]",
+            overlaying="y",
+            side="right"
+        ),
+        hovermode="x unified"
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Tabelle
+    st.dataframe(sens_df, use_container_width=True)
+
+
+def main():
+    """Hauptfunktion der Streamlit App."""
+    
+    # Header
+    st.markdown('<div class="main-header">🌱 CO₂ Neutrality Path Calculator</div>', 
+                unsafe_allow_html=True)
+    st.markdown("**HSLU Digital Twin Programmieren** | Nicola Beeli & Mattia Rohrer")
+    
+    # Sidebar
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio(
+        "Seite auswählen",
+        ["Portfolio-Übersicht", "Gebäude-Analyse", "Vergleich"]
+    )
+    
+    # Daten laden
+    df = lade_daten()
+    
+    if df is None:
+        st.stop()
+    
+    # Seiten
+    if page == "Portfolio-Übersicht":
+        df_aktuell, stats = zeige_portfolio_uebersicht(df)
+        
+        # Top-Emittenten
+        st.subheader("🔴 Top-5 Emittenten")
+        top_df = df_aktuell.nlargest(5, "emissionen_gesamt_t")[
+            ["gebaeude_id", "heizung_typ", "emissionen_gesamt_t"]
+        ]
+        st.dataframe(top_df, use_container_width=True)
+        
+    elif page == "Gebäude-Analyse":
+        # Gebäude auswählen
+        df_aktuell = berechne_emissionen(df[df["jahr"] == df["jahr"].max()])
+        
+        gebaeude_id = st.sidebar.selectbox(
+            "Gebäude auswählen",
+            df_aktuell["gebaeude_id"].unique()
+        )
+        
+        # Details anzeigen
+        gebaeude = zeige_gebaeude_detail(df_aktuell, gebaeude_id)
+        
+        # Sanierungsszenarien
+        szenarien_df = zeige_sanierungsszenarien(gebaeude)
+        
+        # Sensitivität (optional)
+        if len(szenarien_df) > 0:
+            with st.expander("🔬 Sensitivitätsanalyse (Top-Empfehlung)"):
+                top_sanierung = szenarien_df.iloc[0].to_dict()
+                zeige_sensitivitaet(gebaeude, top_sanierung)
+    
+    elif page == "Vergleich":
+        st.header("⚖️ Gebäude-Vergleich")
+        
+        df_aktuell = berechne_emissionen(df[df["jahr"] == df["jahr"].max()])
+        
+        # Multi-Select
+        ausgewaehlte = st.multiselect(
+            "Gebäude auswählen (max. 5)",
+            df_aktuell["gebaeude_id"].unique(),
+            default=df_aktuell["gebaeude_id"].unique()[:3]
+        )
+        
+        if ausgewaehlte:
+            vergleich_df = df_aktuell[df_aktuell["gebaeude_id"].isin(ausgewaehlte)]
+            
+            # Vergleichstabelle
+            st.dataframe(
+                vergleich_df[["gebaeude_id", "heizung_typ", "jahresverbrauch_kwh", 
+                             "emissionen_gesamt_t"]],
+                use_container_width=True
+            )
+            
+            # Chart
+            fig = px.bar(
+                vergleich_df,
+                x="gebaeude_id",
+                y="emissionen_gesamt_t",
+                color="heizung_typ",
+                title="CO₂-Emissionen im Vergleich"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    
+    # Footer
+    st.sidebar.markdown("---")
+    st.sidebar.info("""
+    **HSLU Digital Twin Programmieren**  
+    Nicola Beeli & Mattia Rohrer
+    """)
+
+
+if __name__ == "__main__":
+    main()
