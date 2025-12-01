@@ -186,16 +186,8 @@ def zeige_sanierungsszenarien(gebaeude):
     kategorie_filter = st.sidebar.multiselect(
         "Kategorie",
         options=szenarien_df["kategorie"].unique(),
-        default=szenarien_df["kategorie"].unique()
-    )
-    
-# Filter-Optionen
-    st.sidebar.subheader("🔧 Filter")
-    
-    kategorie_filter = st.sidebar.multiselect(
-        "Kategorie",
-        options=szenarien_df["kategorie"].unique(),
-        default=szenarien_df["kategorie"].unique()
+        default=szenarien_df["kategorie"].unique(),
+        key="kategorie_filter_unique"
     )
     
     # Max. Investition mit Slider
@@ -207,10 +199,10 @@ def zeige_sanierungsszenarien(gebaeude):
         max_value=2000000,
         value=100000,
         step=10000,
-        format="CHF %d"
+        key="max_investition_slider"
     )
     
-    # Formatierte Anzeige
+    # Formatierte Anzeige (Schweizer Format mit Apostroph)
     formatted = f"{max_investition:,}".replace(",", "'")
     st.sidebar.success(f"**CHF {formatted}**")
     
@@ -349,7 +341,7 @@ def main():
     # Header
     st.markdown('<div class="main-header">🌱 CO₂ Neutrality Path Calculator</div>', 
                 unsafe_allow_html=True)
-    st.markdown("**HSLU Digital Twin Programming** | Interaktive Analyse & Sanierungsplanung")
+    st.markdown("**HSLU Digital Twin Programmieren** | Nicola Beeli & Mattia Rohrer")
     
     # Sidebar
     st.sidebar.title("Navigation")
@@ -431,8 +423,8 @@ def main():
     # Footer
     st.sidebar.markdown("---")
     st.sidebar.info("""
-    **HSLU Digital Twin Programming**  
-    Nicola Beeli, Mattia Rohrer
+    **HSLU Digital Twin Programmieren**  
+    Nicola Beeli & Mattia Rohrer
     """)
 
 
