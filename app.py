@@ -198,37 +198,21 @@ def zeige_sanierungsszenarien(gebaeude):
         default=szenarien_df["kategorie"].unique()
     )
     
-    # =====================================================
-    # FILTER: MAX. INVESTITION (mit Slider + formatierter Anzeige)
-    # =====================================================
+    # Max. Investition mit Slider
     st.sidebar.markdown("### 💰 Max. Investition")
     
-    # Realistische Obergrenze: 2 Millionen CHF
-    max_obergrenze = 2000000
-    
-    # Number Input für direkte Eingabe
-    max_inv_input = st.sidebar.number_input(
-        "Betrag eingeben [CHF]:",
-        min_value=0,
-        max_value=max_obergrenze,
-        value=min(100000, int(szenarien_df["investition_netto_chf"].max())),
-        step=10000,
-        format="%d",
-        help="Maximale Investition pro Sanierung"
-    )
-    
-    # Slider für visuelle Anpassung
     max_investition = st.sidebar.slider(
-        "Oder per Slider:",
+        "Budget wählen:",
         min_value=0,
-        max_value=max_obergrenze,
-        value=max_inv_input,
-        step=10000
+        max_value=2000000,
+        value=100000,
+        step=10000,
+        format="CHF %d"
     )
     
-    # Formatierte Anzeige (Schweizer Format mit Apostroph)
-    formatted_investition = f"{max_investition:,}".replace(",", "'")
-    st.sidebar.info(f"**Gewähltes Budget: CHF {formatted_investition}**")
+    # Formatierte Anzeige
+    formatted = f"{max_investition:,}".replace(",", "'")
+    st.sidebar.success(f"**CHF {formatted}**")
     
     # Filtern
     szenarien_gefiltert = szenarien_df[
