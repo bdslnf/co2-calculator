@@ -50,23 +50,8 @@ st.markdown("""
         border-radius: 0.5rem;
         border-left: 4px solid #2E7D32;
     }
-    .big-number {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #1976D2;
-        text-align: center;
-        padding: 0.5rem;
-        background-color: #E3F2FD;
-        border-radius: 0.5rem;
-        margin: 0.5rem 0;
-    }
 </style>
 """, unsafe_allow_html=True)
-
-
-def format_chf(value):
-    """Formatiert Zahlen im Schweizer Format mit Apostroph."""
-    return f"{value:,.0f}".replace(",", "'")
 
 
 def lade_daten():
@@ -205,54 +190,34 @@ def zeige_sanierungsszenarien(gebaeude):
         key="kategorie_filter_unique"
     )
     
-    # Max. Investition mit Input + Slider + Formatierung
+    # Max. Investition mit Input + Slider
     st.sidebar.markdown("### 💰 Max. Investition")
-    
-    # Session State initialisieren
-    if 'max_investition_wert' not in st.session_state:
-        st.session_state.max_investition_wert = 100000
-    
-    # Formatierte Anzeige ZUERST (prominent)
-    formatted_display = format_chf(st.session_state.max_investition_wert)
-    st.sidebar.markdown(f'<div class="big-number">CHF {formatted_display}</div>', unsafe_allow_html=True)
     
     # Number Input für direkte Eingabe
     max_inv_input = st.sidebar.number_input(
-        "Betrag direkt eingeben:",
+        "Betrag eingeben [CHF]:",
         min_value=0,
         max_value=2000000,
-        value=st.session_state.max_investition_wert,
+        value=100000,
         step=10000,
         format="%d",
         key="max_inv_number_input",
-        help="Eingabe ohne Apostroph, z.B. 100000 für CHF 100'000"
+        help="Direkt Betrag eingeben oder Slider nutzen"
     )
     
-    # Update Session State bei Änderung
-    if max_inv_input != st.session_state.max_investition_wert:
-        st.session_state.max_investition_wert = max_inv_input
-        st.rerun()
-    
-    # Slider für visuelle Anpassung
-    max_inv_slider = st.sidebar.slider(
-        "Oder mit Slider:",
+    # Slider für visuelle Anpassung (synchronisiert)
+    max_investition = st.sidebar.slider(
+        "Oder per Slider:",
         min_value=0,
         max_value=2000000,
-        value=st.session_state.max_investition_wert,
+        value=max_inv_input,
         step=10000,
         key="max_inv_slider"
     )
     
-    # Update Session State bei Änderung
-    if max_inv_slider != st.session_state.max_investition_wert:
-        st.session_state.max_investition_wert = max_inv_slider
-        st.rerun()
-    
-    # Finale Variable
-    max_investition = st.session_state.max_investition_wert
-    
-    # Hilfstext mit Beispielen
-    st.sidebar.caption("💡 Beispiele: 50'000 | 100'000 | 500'000 | 1'000'000")
+    # Formatierte Anzeige (Schweizer Format mit Apostroph)
+    formatted = f"{max_investition:,}".replace(",", "'")
+    st.sidebar.success(f"**Budget: CHF {formatted}**")
     
     # Filtern
     szenarien_gefiltert = szenarien_df[
@@ -268,8 +233,8 @@ def zeige_sanierungsszenarien(gebaeude):
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                inv_formatted = format_chf(row['investition_netto_chf'])
-                foerd_formatted = format_chf(row['foerderung_chf'])
+                inv_formatted = f"{row['investition_netto_chf']:,.0f}".replace(",", "'")
+                foerd_formatted = f"{row['foerderung_chf']:,.0f}".replace(",", "'")
                 st.metric("Investition (netto)", f"CHF {inv_formatted}")
                 st.metric("Förderung", f"CHF {foerd_formatted}")
             
@@ -278,7 +243,7 @@ def zeige_sanierungsszenarien(gebaeude):
                 st.metric("Amortisation", f"{row['amortisation_jahre']:.1f} Jahre")
             
             with col3:
-                npv_formatted = format_chf(row['npv_chf'])
+                npv_formatted = f"{row['npv_chf']:,.0f}".replace(",", "'")
                 st.metric("ROI", f"{row['roi_prozent']:.1f}%")
                 st.metric("NPV", f"CHF {npv_formatted}")
             
@@ -295,10 +260,10 @@ def zeige_sanierungsszenarien(gebaeude):
     vergleich_df["co2_einsparung_t_jahr"] = vergleich_df["co2_einsparung_kg_jahr"] / 1000
     vergleich_df = vergleich_df.drop("co2_einsparung_kg_jahr", axis=1)
     
-    # Formatierung für Anzeige
+    # Formatierung für Tabellen-Anzeige
     vergleich_df_display = vergleich_df.copy()
     vergleich_df_display["investition_netto_chf"] = vergleich_df_display["investition_netto_chf"].apply(
-        lambda x: f"CHF {format_chf(x)}"
+        lambda x: f"CHF {x:,.0f}".replace(",", "'")
     )
     
     st.dataframe(
