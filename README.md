@@ -1,27 +1,27 @@
-# CO₂ Neutrality Path Calculator
+# CO₂ Portfolio Calculator
 
-**HSLU Digital Twin Programming** | Nicola Beeli, Manuel Flühler, Domenic Zogg, Fabrice Bachofner Sarn
+**HSLU Digital Twin Programming** | Nicola Beeli, Mattia Rohrer
 
 Vollständiges Tool für CO₂-Emissionsanalyse und Sanierungsplanung von Gebäuden.
 
 ---
 
-## 🎯 Features
+## Features
 
-### ✅ Kern-Funktionen
+### Kern-Funktionen
 - **CO₂-Emissionsberechnung** nach KBOB-Faktoren
 - **Sanierungsszenarien** mit realistischen Schweizer Kosten
 - **Wirtschaftlichkeitsanalyse**: ROI, NPV, Amortisation
 - **Automatische Empfehlungen** und Priorisierung
 - **Fördergelder-Integration** (Gebäudeprogramm, Kantone)
 
-### ✅ Erweiterte Analysen
+### Erweiterte Analysen
 - **Portfolio-Management** für mehrere Gebäude
 - **Benchmark-Vergleiche** (Minergie, SIA 380/1, CH-Durchschnitt)
 - **Sensitivitätsanalysen** (Energiepreise, CO₂-Abgaben)
 - **CO₂-Preis-Szenarien** (0-500 CHF/t)
 
-### ✅ Outputs
+### Outputs
 - **Interaktive Plotly-Visualisierungen** (HTML)
 - **Excel-Reports** (mehrere Sheets, Management-tauglich)
 - **Text-Reports** (Empfehlungen, Benchmarks)
@@ -29,7 +29,7 @@ Vollständiges Tool für CO₂-Emissionsanalyse und Sanierungsplanung von Gebäu
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Installation
 
@@ -62,7 +62,7 @@ streamlit run app.py
 
 ---
 
-## 📁 Projektstruktur
+## Projektstruktur
 
 ```
 co2_calculator/
@@ -87,7 +87,7 @@ co2_calculator/
 
 ---
 
-## 📊 Input-Datenformat
+## Input-Datenformat
 
 **CSV mit folgenden Spalten:**
 
@@ -110,7 +110,7 @@ MFH_Bahnhofstr_5,2024,Öl,205000,39500,1400,1968
 
 ---
 
-## 💡 Verwendung
+## Verwendung
 
 ### CLI-Workflow
 
@@ -152,17 +152,17 @@ streamlit run app.py
 ```
 
 **Features:**
-- 📊 Portfolio-Übersicht mit Kennzahlen
-- 🏢 Gebäude-Detail-Analyse
-- 💡 Interaktive Sanierungsszenarien
-- 🔧 Filter nach Kategorie, Budget
-- 📈 Kosten-Nutzen-Diagramme
-- 🔬 Sensitivitätsanalysen
-- ⚖️ Gebäude-Vergleich
+- Portfolio-Übersicht mit Kennzahlen
+- Gebäude-Detail-Analyse
+- Interaktive Sanierungsszenarien
+- Filter nach Kategorie, Budget
+- Kosten-Nutzen-Diagramme
+- Sensitivitätsanalysen
+- Gebäude-Vergleich
 
 ---
 
-## 🔧 Konfiguration
+## Konfiguration
 
 ### KBOB-Emissionsfaktoren anpassen
 
@@ -205,7 +205,7 @@ FOERDERGELDER = {
 
 ---
 
-## 📈 Ergebnisse
+## Ergebnisse
 
 ### Beispiel-Output
 
@@ -233,7 +233,7 @@ Beste Sanierung: Heizungsersatz Gas → Wärmepumpe
 
 ---
 
-## 🧪 Tests
+## Tests
 
 ```bash
 cd tests
@@ -244,7 +244,7 @@ pytest test_wirtschaftlichkeit.py
 
 ---
 
-## 📚 Hintergrund
+## Hintergrund
 
 ### KBOB-Faktoren
 
@@ -261,13 +261,13 @@ Schweizer Ökobilanzdaten im Baubereich (KBOB 2022/1:2022):
 
 ### Fördergelder
 
-- **Gebäudeprogramm:** Pauschal 12'000-15'000 CHF (Heizung)
+- **Gebäudeprogramm:** Pauschal 1'000 CHF (Heizung)
 - **Kantonale Zusätze:** Bis 20% der Investition
 - **PV-Einmalvergütung:** 380 CHF/kWp
 
 ---
 
-## 🛠️ Entwicklung
+## Entwicklung
 
 ### Neue Sanierung hinzufügen
 
@@ -292,29 +292,20 @@ Schweizer Ökobilanzdaten im Baubereich (KBOB 2022/1:2022):
 
 ---
 
-## 📝 To-Do / Erweiterungen
+##  To-Do / Erweiterungen
 
-- [ ] API-Integration (Gebäuderegister BFS)
-- [ ] Graue Energie (Bau-Emissionen)
-- [ ] PDF-Export
 - [ ] Mehr Visualisierungen (Sankey, Waterfall)
 - [ ] User-Authentication (Multi-User Streamlit)
 - [ ] Datenbank-Backend (PostgreSQL)
 
 ---
 
-## 📞 Support
+## Support
 
 **Team:**
 - Nicola Beeli
-- Manuel Flühler
-- Domenic Zogg
-- Fabrice Bachofner Sarn
+- Mattia Rohrer
 
 **Projekt:** HSLU Digital Twin Programming (HS25)
 
 ---
-
-## 📄 Lizenz
-
-Akademisches Projekt - HSLU 2025
