@@ -1,5 +1,5 @@
 """
-CO2 Neutrality Path Calculator - Streamlit Web App
+CO2 Portfolio Calculator - Streamlit Web App
 Interactive Dashboard fuer Gebaeude-Analyse und Sanierungsplanung
 """
 
@@ -29,8 +29,8 @@ from portfolio import analysiere_portfolio, priorisiere_gebaeude_fuer_sanierung
 
 # Page Config
 st.set_page_config(
-    page_title="CO2 Calculator",
-    page_icon="🌱",
+    page_title="CO2 Portfolio Calculator",
+    page_icon="☘︎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -88,7 +88,7 @@ def lade_daten():
 
 def zeige_portfolio_uebersicht(df):
     """Zeigt Portfolio-Uebersicht."""
-    st.header("📊 Portfolio-Übersicht")
+    st.header("▦ Portfolio-Übersicht")
     
     # Aktuelles Jahr
     aktuelles_jahr = df["jahr"].max()
@@ -146,7 +146,7 @@ def zeige_gebaeude_detail(df_aktuell, gebaeude_id):
     """Zeigt Details fuer ein Gebaeude."""
     gebaeude = df_aktuell[df_aktuell["gebaeude_id"] == gebaeude_id].iloc[0]
     
-    st.header(f"🏢 {gebaeude_id}")
+    st.header(f"⌂ {gebaeude_id}")
     
     # Basis-Infos
     col1, col2, col3 = st.columns(3)
@@ -168,7 +168,7 @@ def zeige_gebaeude_detail(df_aktuell, gebaeude_id):
     
     # Benchmarks
     if "flaeche_m2" in gebaeude and gebaeude["flaeche_m2"] > 0:
-        st.subheader("📏 Benchmark-Vergleich")
+        st.subheader("∣—∣ Benchmark-Vergleich")
         
         emissionen_kg = gebaeude["emissionen_gesamt_kg"]
         standards_df = vergleiche_mit_standards(gebaeude, emissionen_kg)
@@ -185,7 +185,7 @@ def zeige_gebaeude_detail(df_aktuell, gebaeude_id):
 
 def zeige_sanierungsszenarien(gebaeude):
     """Zeigt Sanierungsszenarien fuer ein Gebaeude."""
-    st.header("💡 Sanierungsszenarien")
+    st.header("✦ Sanierungsszenarien")
     
     # Szenarien erstellen
     szenarien = erstelle_alle_szenarien(gebaeude, KBOB_FAKTOREN)
@@ -203,7 +203,7 @@ def zeige_sanierungsszenarien(gebaeude):
     szenarien_df = priorisiere_sanierungen(szenarien_wirtschaft)
     
     # Filter-Optionen
-    st.sidebar.subheader("🔧 Filter")
+    st.sidebar.subheader("Filter")
     
     kategorie_filter = st.sidebar.multiselect(
         "Kategorie",
@@ -213,7 +213,7 @@ def zeige_sanierungsszenarien(gebaeude):
     )
     
     # Max. Investition mit formatiertem Text Input + Slider
-    st.sidebar.markdown("### 💰 Max. Investition")
+    st.sidebar.markdown("### ¤ Max. Investition")
     
     # Session State initialisieren
     if 'max_investition_wert' not in st.session_state:
@@ -262,7 +262,7 @@ def zeige_sanierungsszenarien(gebaeude):
     slider_min_formatted = format_number_swiss(0)
     slider_max_formatted = format_number_swiss(2000000)
     slider_current_formatted = format_number_swiss(max_investition)
-    st.sidebar.caption(f"📊 Bereich: {slider_min_formatted} - {slider_max_formatted} CHF")
+    st.sidebar.caption(f"▦ Bereich: {slider_min_formatted} - {slider_max_formatted} CHF")
     
     # Filtern
     szenarien_gefiltert = szenarien_df[
@@ -271,7 +271,7 @@ def zeige_sanierungsszenarien(gebaeude):
     ]
     
     # Top-Empfehlungen
-    st.subheader("🏆 Top-3 Empfehlungen")
+    st.subheader("★ Top-3 Empfehlungen")
     
     for idx, row in szenarien_gefiltert.head(3).iterrows():
         with st.expander(f"#{row['rang']}: {row['name']}", expanded=(idx == 0)):
@@ -295,7 +295,7 @@ def zeige_sanierungsszenarien(gebaeude):
             st.write("**Beschreibung:**", row["beschreibung"])
     
     # Vergleichstabelle
-    st.subheader("📋 Alle Szenarien im Vergleich")
+    st.subheader("≡ Alle Szenarien im Vergleich")
     
     vergleich_df = szenarien_gefiltert[[
         "rang", "name", "kategorie", "investition_netto_chf",
@@ -322,7 +322,7 @@ def zeige_sanierungsszenarien(gebaeude):
     )
     
     # Visualisierung: Kosten vs. CO2
-    st.subheader("📈 Kosten-Nutzen-Analyse")
+    st.subheader("▦ Kosten-Nutzen-Analyse")
     
     fig = px.scatter(
         szenarien_gefiltert,
@@ -346,7 +346,7 @@ def zeige_sanierungsszenarien(gebaeude):
 
 def zeige_sensitivitaet(gebaeude, sanierung):
     """Zeigt Sensitivitaetsanalyse."""
-    st.header("🔍 Sensitivitätsanalyse")
+    st.header("⌕ Sensitivitätsanalyse")
     
     st.write(f"**Massnahme:** {sanierung['name']}")
     
@@ -405,7 +405,7 @@ def main():
     """Hauptfunktion der Streamlit App."""
     
     # Header
-    st.markdown('<div class="main-header">🌱 CO₂ Neutrality Path Calculator</div>', 
+    st.markdown('<div class="main-header">☘︎ CO₂ Portfolio Calculator</div>', 
                 unsafe_allow_html=True)
     st.markdown("**HSLU Digital Twin Programmieren** | Nicola Beeli & Mattia Rohrer")
     
@@ -450,12 +450,12 @@ def main():
         
         # Sensitivitaet (optional)
         if len(szenarien_df) > 0:
-            with st.expander("🔬 Sensitivitätsanalyse (Top-Empfehlung)"):
+            with st.expander("⌕ Sensitivitätsanalyse (Top-Empfehlung)"):
                 top_sanierung = szenarien_df.iloc[0].to_dict()
                 zeige_sensitivitaet(gebaeude, top_sanierung)
     
     elif page == "Vergleich":
-        st.header("⚖️ Gebäude-Vergleich")
+        st.header("≡ Gebäude-Vergleich")
         
         df_aktuell = berechne_emissionen(df[df["jahr"] == df["jahr"].max()])
         
