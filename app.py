@@ -427,7 +427,7 @@ def main():
         df_aktuell, stats = zeige_portfolio_uebersicht(df)
         
         # Top-Emittenten
-        st.subheader("🔴 Top-5 Emittenten")
+        st.subheader("Top-5 Emittenten")
         top_df = df_aktuell.nlargest(5, "emissionen_gesamt_t")[
             ["gebaeude_id", "heizung_typ", "emissionen_gesamt_t"]
         ]
