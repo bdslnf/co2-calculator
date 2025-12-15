@@ -12,8 +12,8 @@ SANIERUNGSKATALOG = {
     "heizung_gas_zu_wp": {
         "name": "Heizungsersatz Gas → Wärmepumpe",
         "kategorie": "Heizung",
-        "investition_chf": 45000,  # Inkl. Erschließung, Pufferspeicher
-        "lebensdauer_jahre": 20,
+        "investition_chf": 50000,  # Inkl. Erschließung, Pufferspeicher
+        "lebensdauer_jahre": 25,
         "neue_heizung": "Wärmepumpe",
         "energieeinsparung_prozent": 0,  # Gleiche kWh, aber besserer Faktor
         "beschreibung": "Ersatz fossile Heizung durch Luft/Wasser-Wärmepumpe",
@@ -21,8 +21,8 @@ SANIERUNGSKATALOG = {
     "heizung_oel_zu_wp": {
         "name": "Heizungsersatz Öl → Wärmepumpe",
         "kategorie": "Heizung",
-        "investition_chf": 48000,  # Inkl. Tankentsorgung
-        "lebensdauer_jahre": 20,
+        "investition_chf": 50000,  # Inkl. Tankentsorgung
+        "lebensdauer_jahre": 25,
         "neue_heizung": "Wärmepumpe",
         "energieeinsparung_prozent": 0,
         "beschreibung": "Ersatz Ölheizung durch Wärmepumpe, inkl. Tankrückbau",
@@ -31,15 +31,15 @@ SANIERUNGSKATALOG = {
         "name": "Fassadendämmung",
         "kategorie": "Gebäudehülle",
         "investition_chf_pro_m2": 280,  # Minergie-Qualität
-        "lebensdauer_jahre": 40,
+        "lebensdauer_jahre": 50,
         "energieeinsparung_prozent": 25,  # Reduktion Heizenergie
-        "beschreibung": "Vollständige Fassadendämmung 16cm, U-Wert < 0.20",
+        "beschreibung": "Vollständige Fassadendämmung 20cm, U-Wert < 0.20",
     },
     "daemmung_dach": {
         "name": "Dachdämmung",
         "kategorie": "Gebäudehülle",
         "investition_chf_pro_m2": 220,
-        "lebensdauer_jahre": 40,
+        "lebensdauer_jahre": 50,
         "energieeinsparung_prozent": 15,
         "beschreibung": "Aufdachdämmung 20cm, U-Wert < 0.15",
     },
@@ -47,7 +47,7 @@ SANIERUNGSKATALOG = {
         "name": "Fensterersatz",
         "kategorie": "Gebäudehülle",
         "investition_chf_pro_m2": 850,  # 3-fach-Verglasung
-        "lebensdauer_jahre": 30,
+        "lebensdauer_jahre": 50,
         "energieeinsparung_prozent": 12,
         "beschreibung": "3-fach-Verglasung, U-Wert < 0.8",
     },
@@ -62,7 +62,7 @@ SANIERUNGSKATALOG = {
     "solar_thermie": {
         "name": "Solarthermie Warmwasser",
         "kategorie": "Warmwasser",
-        "investition_chf": 12000,  # 6m² Kollektoren
+        "investition_chf": 10000,  # 6m² Kollektoren
         "lebensdauer_jahre": 25,
         "warmwasser_deckung_prozent": 60,
         "beschreibung": "Solarkollektoren für Warmwasser",
@@ -72,12 +72,12 @@ SANIERUNGSKATALOG = {
 # Schweizer Förderprogramme (vereinfacht)
 FOERDERGELDER = {
     "heizung_gas_zu_wp": {
-        "gebaeudeprogramm_chf": 12000,  # Pauschal
+        "gebaeudeprogramm_chf": 1000,  # Pauschal
         "kanton_zusatz_prozent": 20,  # Zusätzlich 20% der Investition
         "max_foerderung_chf": 25000,
     },
     "heizung_oel_zu_wp": {
-        "gebaeudeprogramm_chf": 15000,  # Höher wegen Tankentsorgung
+        "gebaeudeprogramm_chf": 1000,  # Pauschal
         "kanton_zusatz_prozent": 20,
         "max_foerderung_chf": 30000,
     },
