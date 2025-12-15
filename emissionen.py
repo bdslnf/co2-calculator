@@ -1,6 +1,5 @@
 """
 Emissionsberechnungen für Gebäude nach KBOB-Methodik
-HSLU Digital Twin Programming - CO₂ Neutrality Path Calculator
 """
 
 from typing import Dict
