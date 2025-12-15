@@ -1,7 +1,7 @@
 """
-CO₂ Neutrality Path Calculator - Hauptprogramm (ERWEITERT)
+CO₂ Portfolio Calculator - Hauptprogramm
 HSLU Digital Twin Programming
-Autoren: Nicola, Manuel, Domenic, Fabrice
+Autoren: Nicola, Mattia
 
 Vollständige Analyse inkl.:
 - CO₂-Emissionsberechnung
@@ -10,7 +10,6 @@ Vollständige Analyse inkl.:
 - Empfehlungen und Priorisierung
 - Benchmark-Vergleiche
 - Portfolio-Optimierung
-- Excel-Export
 """
 
 from pathlib import Path
@@ -56,8 +55,8 @@ def main():
     """Hauptfunktion: Vollständige Analyse mit allen Features."""
     
     logger.info("=" * 70)
-    logger.info("CO₂ NEUTRALITY PATH CALCULATOR - VOLLVERSION")
-    logger.info("HSLU Digital Twin Programming | Nicola, Manuel, Domenic, Fabrice")
+    logger.info("CO₂ PORTFOLIO CALCULATOR")
+    logger.info("HSLU Digital Twin Programming | Nicola, Mattia")
     logger.info("=" * 70)
     
     # === 1. DATEN LADEN ===
@@ -71,7 +70,7 @@ def main():
     logger.info(f"\n[1/8] Lade Daten: {CSV_INPUT.name}")
     try:
         df = pd.read_csv(CSV_INPUT, encoding="utf-8")
-        logger.info(f"      ✓ {len(df)} Datensätze geladen")
+        logger.info(f"{len(df)} Datensätze geladen")
     except Exception as e:
         logger.error(f"      Fehler: {e}")
         sys.exit(1)
@@ -92,7 +91,7 @@ def main():
             logger.error("\n      Abbruch wegen kritischer Fehler.")
             sys.exit(1)
     else:
-        logger.info("      ✓ Validierung erfolgreich")
+        logger.info("Validierung erfolgreich")
     
     # === 3. EMISSIONEN BERECHNEN ===
     logger.info("\n[3/8] Berechne CO₂-Emissionen...")
@@ -113,7 +112,7 @@ def main():
     df_aktuell = df_mit_emissionen[df_mit_emissionen["jahr"] == aktuelles_jahr].copy()
     
     portfolio_stats = analysiere_portfolio(df_aktuell, KBOB_FAKTOREN)
-    logger.info(f"      ✓ Portfolio-Report erstellt")
+    logger.info(f"Portfolio-Report erstellt")
     
     # Portfolio-Report speichern
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -145,7 +144,7 @@ def main():
             kombi_wirtschaft["gebaeude_id"] = gebaeude["gebaeude_id"]
             alle_sanierungen.append(kombi_wirtschaft)
     
-    logger.info(f"      ✓ {len(alle_sanierungen)} Szenarien berechnet")
+    logger.info(f"{len(alle_sanierungen)} Szenarien berechnet")
     
     # === 6. EMPFEHLUNGEN GENERIEREN ===
     logger.info("\n[6/8] Generiere Empfehlungen...")
@@ -157,7 +156,7 @@ def main():
     empfehlung_path = REPORTS_DIR / "empfehlungen.txt"
     exportiere_empfehlungsbericht(empfehlung_path, empfehlungsbericht)
     
-    logger.info(f"      ✓ Top-5 Empfehlungen erstellt")
+    logger.info(f"Top-5 Empfehlungen erstellt")
     logger.info(f"      → {empfehlung_path.relative_to(ROOT)}")
     
     # Top-Sanierung für Detail-Report
@@ -171,10 +170,7 @@ def main():
     PLOTS_DIR.mkdir(parents=True, exist_ok=True)
     
     plots = erstelle_alle_visualisierungen(df_yearly, df_kumuliert, PLOTS_DIR)
-    logger.info(f"      ✓ {len(plots)} Basis-Diagramme erstellt")
-    
-    # Zusätzliche Visualisierungen erstellen würde hier kommen
-    # (Kosten-Nutzen-Scatter, Amortisations-Timeline, etc.)
+    logger.info(f"{len(plots)} Basis-Diagramme erstellt")
     
     # === 8. EXCEL-EXPORT ===
     logger.info("\n[8/8] Excel-Export...")
@@ -204,8 +200,8 @@ def main():
         with open(benchmark_file, "w", encoding="utf-8") as f:
             f.write(report)
     
-    logger.info(f"      ✓ {len(df_aktuell)} Benchmark-Reports erstellt")
-    logger.info(f"      → {benchmark_dir.relative_to(ROOT)}")
+    logger.info(f"{len(df_aktuell)} Benchmark-Reports erstellt")
+    logger.info(f"{benchmark_dir.relative_to(ROOT)}")
     
     # === ZUSAMMENFASSUNG ===
     logger.info("\n" + "=" * 70)
