@@ -24,33 +24,3 @@ MFH_Lindenweg_14,2021,Gas,150000,40500,1100,1982
 MFH_Lindenweg_14,2022,Gas,148000,41000,1100,1982
 MFH_Lindenweg_14,2023,Gas,145000,41200,1100,1982
 MFH_Lindenweg_14,2024,Gas,143000,41500,1100,1982
-```
-
----
-
-### **SCHRITT 4: Speichern**
-
-**Scrolle nach unten**
-
-**"Commit changes"** (grüner Button)
-
----
-
-### **SCHRITT 5: Alte CSV löschen**
-
-**Zurück zur Hauptseite**
-
-**Klicke auf:** `beispiel_emissionen_mit_jahr.csv` (die im Root)
-
-**Oben rechts: 🗑️ Mülleimer** → "Delete file" → "Commit changes"
-
----
-
-## ✅ DANN HAST DU:
-```
-co2-calculator/
-├── app.py
-├── data/
-│   └── beispiel_emissionen_mit_jahr.csv  ✅
-├── requirements.txt
-└── ...
