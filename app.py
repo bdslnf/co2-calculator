@@ -4,7 +4,7 @@ HSLU Digital Twin Programmieren | Nicola Beeli & Mattia Rohrer
 
 Hinweis:
 - Pro Gebaeude wird in der Portfolio-Uebersicht ein Bild angezeigt.
-- Bilder liegen als JPG unter: data/images/<gebaeude_id>.jpg
+- Bilder liegen unter: data/images/<gebaeude_id>.jpg oder .jpeg
 - Keine Standort-Karte (Map) enthalten.
 """
 
@@ -20,8 +20,6 @@ from PIL import Image  # Pillow
 from emissionen import (
     validiere_eingabedaten,
     berechne_emissionen,
-    aggregiere_jaehrlich,
-    berechne_kumulierte_emissionen,
     KBOB_FAKTOREN,
 )
 from sanierungen import erstelle_alle_szenarien, erstelle_kombinationsszenarien
@@ -29,6 +27,7 @@ from wirtschaftlichkeit import wirtschaftlichkeitsanalyse, sensitivitaetsanalyse
 from empfehlungen import priorisiere_sanierungen
 from benchmarks import vergleiche_mit_standards
 from portfolio import analysiere_portfolio
+
 
 # -----------------------------
 # Logging
@@ -161,7 +160,7 @@ div[data-baseweb="select"] > div:focus-within {{
   border-color: var(--green-main) !important;
 }}
 
-/* SLIDER: Rot -> Gruen */
+/* SLIDER: Rot -> Gruen + Text dunkel */
 div[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {{
   background: var(--green-main) !important;
 }}
@@ -182,7 +181,7 @@ a:hover {{
   color: var(--green-dark) !important;
 }}
 
-/* Fokus ruhiger */
+/* Fokus ruhig */
 *:focus {{
   outline: none !important;
   box-shadow: none !important;
@@ -217,7 +216,7 @@ def parse_swiss_number(text):
 
 
 def lade_daten() -> pd.DataFrame | None:
-    """Laedt Input-CSV."""
+    """Laedt Input-CSV und validiert."""
     if not CSV_INPUT.exists():
         st.error(f"CSV-Datei nicht gefunden: {CSV_INPUT}")
         return None
@@ -228,7 +227,6 @@ def lade_daten() -> pd.DataFrame | None:
         st.error(f"Fehler beim Laden der CSV: {e}")
         return None
 
-    # Validierung
     fehler = validiere_eingabedaten(df)
     if fehler:
         for f in fehler:
@@ -253,8 +251,7 @@ def finde_gebaeude_bildpfad(gebaeude_id: str) -> Path | None:
 
     gid = str(gebaeude_id).strip()
 
-    # Falls jemand versehentlich Leerzeichen im Dateinamen nutzt:
-    # (optional, aber harmless)
+    # Optional: falls Dateinamen Leerzeichen statt Unterstrich haben
     kandidaten = [gid, gid.replace(" ", "_")]
 
     for base in kandidaten:
@@ -262,12 +259,11 @@ def finde_gebaeude_bildpfad(gebaeude_id: str) -> Path | None:
             p = IMAGES_DIR / f"{base}.{ext}"
             if p.exists():
                 return p
-
     return None
 
 
 def zeige_bild_oder_placeholder(gebaeude_id: str, height: int = 160):
-    """Zeigt JPG falls vorhanden, sonst Placeholder."""
+    """Zeigt Bild falls vorhanden, sonst Placeholder."""
     p = finde_gebaeude_bildpfad(gebaeude_id)
     if p:
         try:
@@ -304,11 +300,8 @@ def page_portfolio_uebersicht(df: pd.DataFrame):
 
     aktuelles_jahr = int(df["jahr"].max())
     df_aktuell = df[df["jahr"] == aktuelles_jahr].copy()
-
-    # Emissionen berechnen
     df_aktuell = berechne_emissionen(df_aktuell)
 
-    # Portfolio Kennzahlen
     stats = analysiere_portfolio(df_aktuell, KBOB_FAKTOREN)
 
     c1, c2, c3, c4 = st.columns(4)
@@ -346,9 +339,8 @@ def page_portfolio_uebersicht(df: pd.DataFrame):
     fig.update_layout(margin=dict(t=60, b=20, l=20, r=20), legend_title_text="Heizung")
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- Galerie: pro Gebaeude ein Bild + Kennzahlen ---
+    # Galerie: pro Gebaeude ein Bild + Kennzahlen
     st.subheader("Gebaeude (Bilder)")
-
     cards_df = df_aktuell.sort_values("emissionen_gesamt_t", ascending=False).reset_index(drop=True)
 
     cols_per_row = 3
@@ -361,6 +353,7 @@ def page_portfolio_uebersicht(df: pd.DataFrame):
         for col in cols:
             if idx >= total:
                 break
+
             row = cards_df.iloc[idx]
             gid = row["gebaeude_id"]
 
@@ -388,6 +381,13 @@ def page_gebaeude_analyse(df: pd.DataFrame):
 
     st.header(f"⌂ {gebaeude_id}")
 
+    # -------------------------------------------------------
+    # WICHTIG: Bild an die Position der Emissionen verschieben
+    # (Bild zuerst, danach Kennzahlen)
+    # -------------------------------------------------------
+    zeige_bild_oder_placeholder(gebaeude_id, height=260)
+    st.markdown("---")
+
     c1, c2, c3 = st.columns(3)
     with c1:
         st.write("**Heizung:**", gebaeude.get("heizung_typ", "-"))
@@ -396,17 +396,21 @@ def page_gebaeude_analyse(df: pd.DataFrame):
                 st.write("**Baujahr:**", int(gebaeude["baujahr"]))
             except Exception:
                 pass
+
     with c2:
-        st.write("**Verbrauch Heizen:**", f"{format_number_swiss(gebaeude.get('jahresverbrauch_kwh', 0))} kWh/Jahr")
-        st.write("**Strom:**", f"{format_number_swiss(gebaeude.get('strom_kwh_jahr', 0))} kWh/Jahr")
+        st.write(
+            "**Verbrauch Heizen:**",
+            f"{format_number_swiss(gebaeude.get('jahresverbrauch_kwh', 0))} kWh/Jahr",
+        )
+        st.write(
+            "**Strom:**",
+            f"{format_number_swiss(gebaeude.get('strom_kwh_jahr', 0))} kWh/Jahr",
+        )
+
     with c3:
-        st.write("**Emissionen:**", f"{gebaeude.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
+        st.metric("Emissionen", f"{gebaeude.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
 
-    # Bild anzeigen (optional, hilft beim Storytelling)
-    st.subheader("Gebaeude-Bild")
-    zeige_bild_oder_placeholder(gebaeude_id, height=220)
-
-    # Benchmarks (falls flaeche vorhanden)
+    # Benchmarks (falls Flaeche vorhanden)
     if "flaeche_m2" in gebaeude and pd.notna(gebaeude["flaeche_m2"]) and gebaeude["flaeche_m2"] > 0:
         st.subheader("Benchmark-Vergleich")
         standards_df = vergleiche_mit_standards(gebaeude, gebaeude.get("emissionen_gesamt_kg", 0))
@@ -420,13 +424,10 @@ def page_gebaeude_analyse(df: pd.DataFrame):
     kombis = erstelle_kombinationsszenarien(gebaeude, KBOB_FAKTOREN)
     alle = szenarien + kombis
 
-    szen_wirtschaft = []
-    for san in alle:
-        szen_wirtschaft.append(wirtschaftlichkeitsanalyse(san, gebaeude))
-
+    szen_wirtschaft = [wirtschaftlichkeitsanalyse(san, gebaeude) for san in alle]
     szen_df = priorisiere_sanierungen(szen_wirtschaft, kriterium="score")
 
-    # Filter
+    # Filter (Sidebar)
     st.sidebar.subheader("Filter")
 
     if "kategorie" in szen_df.columns:
@@ -460,191 +461,4 @@ def page_gebaeude_analyse(df: pd.DataFrame):
         value=st.session_state.max_investition_wert,
         step=10000,
     )
-    if slider != st.session_state.max_investition_wert:
-        st.session_state.max_investition_wert = slider
-        st.rerun()
-
-    max_inv = st.session_state.max_investition_wert
-    st.sidebar.success(f"**Gewaehlt: CHF {format_number_swiss(max_inv)}**")
-    st.sidebar.caption(f"Bereich: 0 - {format_number_swiss(2000000)} CHF")
-
-    # Anwenden Filter
-    szen_f = szen_df.copy()
-    if kategorie_filter:
-        szen_f = szen_f[szen_f["kategorie"].isin(kategorie_filter)]
-    if "investition_netto_chf" in szen_f.columns:
-        szen_f = szen_f[szen_f["investition_netto_chf"] <= max_inv]
-
-    st.subheader("Top-3 Empfehlungen")
-    for i, row in szen_f.head(3).iterrows():
-        title = f"#{int(row.get('rang', i+1))}: {row.get('name', 'Massnahme')}"
-        with st.expander(title, expanded=(i == 0)):
-            cc1, cc2, cc3 = st.columns(3)
-            with cc1:
-                st.metric("Investition (netto)", f"CHF {format_number_swiss(row.get('investition_netto_chf', 0))}")
-                st.metric("Foerderung", f"CHF {format_number_swiss(row.get('foerderung_chf', 0))}")
-            with cc2:
-                st.metric("CO₂-Reduktion", f"{row.get('co2_einsparung_kg_jahr', 0)/1000:.1f} t/Jahr")
-                st.metric("Amortisation", f"{row.get('amortisation_jahre', 0):.1f} Jahre")
-            with cc3:
-                st.metric("ROI", f"{row.get('roi_prozent', 0):.1f}%")
-                st.metric("NPV", f"CHF {format_number_swiss(row.get('npv_chf', 0))}")
-            if "beschreibung" in row:
-                st.write("**Beschreibung:**", row.get("beschreibung", ""))
-
-    st.subheader("Alle Szenarien im Vergleich")
-    show_cols = [
-        "rang",
-        "name",
-        "kategorie",
-        "investition_netto_chf",
-        "co2_einsparung_kg_jahr",
-        "amortisation_jahre",
-        "roi_prozent",
-        "npv_chf",
-        "prioritaets_score",
-    ]
-    show_cols = [c for c in show_cols if c in szen_f.columns]
-    st.dataframe(szen_f[show_cols], use_container_width=True)
-
-    # Kosten vs CO2 Scatter (Gruen)
-    if "investition_netto_chf" in szen_f.columns and "co2_einsparung_kg_jahr" in szen_f.columns and len(szen_f) > 0:
-        st.subheader("Kosten-Nutzen-Analyse")
-        cat_map = get_category_color_map(szen_f["kategorie"]) if "kategorie" in szen_f.columns else None
-
-        fig = px.scatter(
-            szen_f,
-            x="investition_netto_chf",
-            y="co2_einsparung_kg_jahr",
-            size="prioritaets_score" if "prioritaets_score" in szen_f.columns else None,
-            color="kategorie" if "kategorie" in szen_f.columns else None,
-            color_discrete_map=cat_map,
-            hover_data=["name"] if "name" in szen_f.columns else None,
-            template=PLOTLY_TEMPLATE,
-            title="Investition vs. CO₂-Reduktion (Groesse = Prioritaet)",
-        )
-        fig.update_traces(marker=dict(opacity=0.85))
-        st.plotly_chart(fig, use_container_width=True)
-
-    # Sensitivitaet (Top)
-    if len(szen_f) > 0:
-        with st.expander("Sensitivitaetsanalyse (Top-Empfehlung)"):
-            top = szen_f.iloc[0].to_dict()
-            parameter = st.selectbox(
-                "Szenario",
-                ["energiepreis", "co2_abgabe", "foerderung"],
-                format_func=lambda x: {
-                    "energiepreis": "Energiepreis-Entwicklung",
-                    "co2_abgabe": "CO₂-Abgabe",
-                    "foerderung": "Foerdergelder",
-                }[x],
-            )
-            sens_df = sensitivitaetsanalyse(top, gebaeude, parameter)
-
-            fig2 = go.Figure()
-            fig2.add_trace(
-                go.Scatter(
-                    x=sens_df["faktor"],
-                    y=sens_df["amortisation_jahre"],
-                    mode="lines+markers",
-                    name="Amortisation",
-                    line=dict(color=GREEN_MAIN, width=3),
-                    marker=dict(size=7),
-                )
-            )
-            if "npv_chf" in sens_df.columns:
-                fig2.add_trace(
-                    go.Scatter(
-                        x=sens_df["faktor"],
-                        y=sens_df["npv_chf"],
-                        mode="lines+markers",
-                        name="NPV",
-                        line=dict(color=GREEN_DARK, width=3),
-                        marker=dict(size=7),
-                        yaxis="y2",
-                    )
-                )
-
-            fig2.update_layout(
-                title=f"Sensitivitaet: {parameter}",
-                xaxis_title="Multiplikator (1.0 = Basis)",
-                yaxis_title="Amortisation [Jahre]",
-                yaxis2=dict(title="NPV [CHF]", overlaying="y", side="right"),
-                hovermode="x unified",
-                template=PLOTLY_TEMPLATE,
-            )
-            st.plotly_chart(fig2, use_container_width=True)
-            st.dataframe(sens_df, use_container_width=True)
-
-
-def page_vergleich(df: pd.DataFrame):
-    st.header("≡ Gebaeude-Vergleich")
-
-    df_aktuell = df[df["jahr"] == df["jahr"].max()].copy()
-    df_aktuell = berechne_emissionen(df_aktuell)
-
-    ausgewaehlt = st.multiselect(
-        "Gebaeude auswaehlen (max. 5)",
-        list(df_aktuell["gebaeude_id"].unique()),
-        default=list(df_aktuell["gebaeude_id"].unique())[:3],
-    )
-
-    if not ausgewaehlt:
-        st.info("Bitte mindestens ein Gebaeude auswaehlen.")
-        return
-
-    vdf = df_aktuell[df_aktuell["gebaeude_id"].isin(ausgewaehlt)].copy()
-
-    st.subheader("Kennzahlen")
-    cols = ["gebaeude_id", "heizung_typ", "jahresverbrauch_kwh", "strom_kwh_jahr", "emissionen_gesamt_t"]
-    cols = [c for c in cols if c in vdf.columns]
-    st.dataframe(vdf[cols], use_container_width=True)
-
-    st.subheader("CO₂-Emissionen im Vergleich")
-    heiz_map = {t: COLOR_MAP_HEIZUNG.get(t, GREEN_MAIN) for t in vdf["heizung_typ"].unique()}
-    fig = px.bar(
-        vdf,
-        x="gebaeude_id",
-        y="emissionen_gesamt_t",
-        color="heizung_typ",
-        color_discrete_map=heiz_map,
-        template=PLOTLY_TEMPLATE,
-        title="CO₂-Emissionen pro Gebaeude",
-    )
-    fig.update_layout(legend_title_text="Heizung")
-    st.plotly_chart(fig, use_container_width=True)
-
-
-# -----------------------------
-# Main
-# -----------------------------
-def main():
-    st.markdown('<div class="main-header">☘︎ CO₂ Portfolio Calculator</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="sub-header">HSLU Digital Twin Programmieren | Nicola Beeli & Mattia Rohrer</div>',
-        unsafe_allow_html=True,
-    )
-
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio(
-        "Seite auswaehlen",
-        ["Portfolio-Uebersicht", "Gebaeude-Analyse", "Vergleich"],
-    )
-
-    df = lade_daten()
-    if df is None:
-        st.stop()
-
-    if page == "Portfolio-Uebersicht":
-        page_portfolio_uebersicht(df)
-    elif page == "Gebaeude-Analyse":
-        page_gebaeude_analyse(df)
-    else:
-        page_vergleich(df)
-
-    st.sidebar.markdown("---")
-    st.sidebar.info("**HSLU Digital Twin Programmieren**  \nNicola Beeli & Mattia Rohrer")
-
-
-if __name__ == "__main__":
-    main()
+    if slider != st
