@@ -1,13 +1,6 @@
 """
 CO2 Portfolio Calculator - Streamlit Web App
 HSLU Digital Twin Programmieren | Nicola Beeli & Mattia Rohrer
-
-Aenderungen (Layout Gebaeude-Analyse):
-- Bild klein rechts neben den Ausgangsdaten (nicht volle Breite)
-- Emissionen als normaler Text wie die restlichen Daten links (kein st.metric)
-- Sidebar-Farben: Rot/Blau -> Gruen (Tags/Radio/Slider/Links)
-- Bilder: data/images/<gebaeude_id>.(jpg|jpeg|png|webp)
-- Keine Standort-Karte
 """
 
 from pathlib import Path
@@ -27,19 +20,11 @@ from empfehlungen import priorisiere_sanierungen
 from benchmarks import vergleiche_mit_standards
 from portfolio import analysiere_portfolio
 
-
-# ------------------------------------------------------------
-# Pfade
-# ------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 CSV_INPUT = DATA_DIR / "beispiel_emissionen_mit_jahr.csv"
 IMAGES_DIR = DATA_DIR / "images"
 
-
-# ------------------------------------------------------------
-# Design System (Gruen)
-# ------------------------------------------------------------
 GREEN_DARK = "#1B5E20"
 GREEN_MAIN = "#2E7D32"
 GREEN_MED = "#66BB6A"
@@ -70,10 +55,6 @@ def get_category_color_map(categories):
     cats = list(pd.Series(categories).dropna().unique())
     return {c: fallback[i % len(fallback)] for i, c in enumerate(cats)}
 
-
-# ------------------------------------------------------------
-# Streamlit Config
-# ------------------------------------------------------------
 st.set_page_config(
     page_title="CO2 Portfolio Calculator",
     page_icon="☘︎",
@@ -81,9 +62,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ------------------------------------------------------------
-# CSS: Gruen statt Rot/Blau + Bild-Wrapper
-# ------------------------------------------------------------
 st.markdown(
     f"""
 <style>
@@ -126,12 +104,10 @@ a:hover {{ color: var(--green-dark) !important; }}
   font-weight: 700;
 }}
 
-/* Sidebar: Radio */
 div[data-testid="stSidebar"] div[data-testid="stRadio"] input[type="radio"] {{
   accent-color: var(--green-main) !important;
 }}
 
-/* Sidebar: Slider */
 div[data-testid="stSidebar"] div[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {{
   background: var(--green-main) !important;
 }}
@@ -139,7 +115,6 @@ div[data-testid="stSidebar"] div[data-testid="stSlider"] * {{
   color: var(--gray-900) !important;
 }}
 
-/* Sidebar: Select */
 div[data-testid="stSidebar"] div[data-baseweb="select"] > div {{
   border-color: rgba(46,125,50,0.55) !important;
 }}
@@ -148,7 +123,6 @@ div[data-testid="stSidebar"] div[data-baseweb="select"] > div:focus-within {{
   box-shadow: 0 0 0 2px rgba(46,125,50,0.25) !important;
 }}
 
-/* Sidebar: Multiselect Tags */
 div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[data-baseweb="tag"] {{
   background-color: var(--green-med) !important;
   color: var(--white) !important;
@@ -171,7 +145,6 @@ div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[role="button"]
   border: 0 !important;
 }}
 
-/* Bild rechts: runde Ecken + feste Hoehe */
 .img-right img {{
   border-radius: 14px;
   height: 220px !important;
@@ -183,9 +156,6 @@ div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[role="button"]
 )
 
 
-# ------------------------------------------------------------
-# Utilities
-# ------------------------------------------------------------
 def format_number_swiss(value) -> str:
     try:
         value = float(value)
@@ -237,7 +207,6 @@ def finde_gebaeude_bildpfad(gebaeude_id: str) -> Path | None:
 
 
 def zeige_bild_rechts(gebaeude_id: str):
-    """Zeigt ein verkleinertes Bild (rechts), ohne volle Breite zu belegen."""
     p = finde_gebaeude_bildpfad(gebaeude_id)
     st.markdown('<div class="img-right">', unsafe_allow_html=True)
     if p:
@@ -263,9 +232,7 @@ def zeige_bild_rechts(gebaeude_id: str):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ------------------------------------------------------------
-# Pages
-# ------------------------------------------------------------
+
 def page_portfolio_uebersicht(df: pd.DataFrame):
     st.header("▦ Portfolio-Uebersicht")
 
@@ -356,29 +323,50 @@ def page_gebaeude_analyse(df: pd.DataFrame):
 
     st.header(f"⌂ {gebaeude_id}")
 
-    # Layout: Daten links, Bild rechts
-    left, right = st.columns([3, 2], vertical_alignment="top")
+    # Layout: Ausgangsdaten links, Bild rechts (klein)
+col_data, col_img = st.columns([4, 2], vertical_alignment="top")
 
-    with left:
-        # Emissionen gleich darstellen wie der Rest (Textzeilen)
-        st.write(f"**Heizung:** {gebaeude.get('heizung_typ', '-')}")
-        if "baujahr" in gebaeude:
-            try:
-                st.write(f"**Baujahr:** {int(gebaeude['baujahr'])}")
-            except Exception:
-                pass
+with col_data:
+    # Alles gleich darstellen (einheitlich als Textzeilen)
+    st.write(f"**Heizung:** {gebaeude.get('heizung_typ', '-')}")
+    if "baujahr" in gebaeude:
+        try:
+            st.write(f"**Baujahr:** {int(gebaeude['baujahr'])}")
+        except Exception:
+            pass
 
-        st.write(f"**Verbrauch:** {format_number_swiss(gebaeude.get('jahresverbrauch_kwh', 0))} kWh/Jahr")
+    st.write(f"**Verbrauch:** {format_number_swiss(gebaeude.get('jahresverbrauch_kwh', 0))} kWh/Jahr")
 
-        if "flaeche_m2" in gebaeude and pd.notna(gebaeude["flaeche_m2"]):
-            st.write(f"**Flaeche:** {format_number_swiss(gebaeude.get('flaeche_m2', 0))} m²")
+    if "flaeche_m2" in gebaeude and pd.notna(gebaeude["flaeche_m2"]):
+        st.write(f"**Flaeche:** {format_number_swiss(gebaeude.get('flaeche_m2', 0))} m²")
 
-        # Emissionen als normale Zeile
-        st.write(f"**Emissionen:** {gebaeude.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
+    # Emissionen NICHT als metric, sondern gleich wie der Rest
+    st.write(f"**Emissionen:** {gebaeude.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
 
-    with right:
-        zeige_bild_rechts(gebaeude_id)
-
+with col_img:
+    # Bild klein (nicht volle Spaltenbreite!)
+    p = finde_gebaeude_bildpfad(gebaeude_id)
+    if p:
+        st.image(str(p), width=280)  # <- fix: klein rechts
+    else:
+        st.markdown(
+            f"""
+            <div style="
+                width:280px;
+                height:200px;
+                border:1px dashed {GREEN_LIGHT};
+                border-radius:14px;
+                background:#F5F7F6;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                color:{GRAY_600};
+                font-weight:800;">
+                Kein Bild: {gebaeude_id}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     st.markdown("---")
 
     # Benchmark
