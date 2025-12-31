@@ -380,31 +380,254 @@ def page_gebaeude(df: pd.DataFrame):
 
 def page_vergleich(df: pd.DataFrame):
     st.header("≡ Gebäude-Vergleich")
+
     df_now = berechne_emissionen(df[df["jahr"] == df["jahr"].max()].copy())
 
+    # Auswahl (max. 5)
+    all_ids = list(df_now["gebaeude_id"].unique())
     selected = st.multiselect(
         "Gebäude auswählen (max. 5)",
-        list(df_now["gebaeude_id"].unique()),
-        default=list(df_now["gebaeude_id"].unique())[:3],
+        all_ids,
+        default=all_ids[:3],
     )
+    if len(selected) > 5:
+        st.warning("Bitte maximal 5 Gebäude auswählen.")
+        selected = selected[:5]
     if not selected:
         st.info("Bitte mindestens ein Gebäude auswählen.")
         return
 
     vdf = df_now[df_now["gebaeude_id"].isin(selected)].copy()
-    cols = [c for c in ["gebaeude_id", "heizung_typ", "jahresverbrauch_kwh", "emissionen_gesamt_t"] if c in vdf.columns]
-    st.dataframe(vdf[cols], use_container_width=True)
 
+    # Ableitungen
+    if "flaeche_m2" in vdf.columns:
+        vdf["emissionen_pro_m2"] = vdf.apply(
+            lambda r: (r.get("emissionen_gesamt_t", 0) / r["flaeche_m2"])
+            if pd.notna(r.get("flaeche_m2")) and r["flaeche_m2"]
+            else None,
+            axis=1,
+        )
+        vdf["verbrauch_pro_m2"] = vdf.apply(
+            lambda r: (r.get("jahresverbrauch_kwh", 0) / r["flaeche_m2"])
+            if pd.notna(r.get("flaeche_m2")) and r["flaeche_m2"]
+            else None,
+            axis=1,
+        )
+    else:
+        vdf["emissionen_pro_m2"] = None
+        vdf["verbrauch_pro_m2"] = None
+
+    # Kennzahlenwahl (Balken)
+    c1, c2, c3 = st.columns([2, 2, 2])
+    with c1:
+        metric = st.selectbox(
+            "Kennzahl",
+            [
+                "Emissionen (t CO₂e/Jahr)",
+                "Verbrauch (kWh/Jahr)",
+                "Emissionen pro m² (t CO₂e/m²)",
+                "Verbrauch pro m² (kWh/m²)",
+            ],
+        )
+    with c2:
+        sort_on = st.selectbox("Sortieren", ["keine", "aufsteigend", "absteigend"])
+    with c3:
+        normalize = st.checkbox("Normalisieren (0–1)", value=False)
+
+    if metric == "Emissionen (t CO₂e/Jahr)":
+        y_col = "emissionen_gesamt_t"
+        y_title = "t CO₂e/Jahr"
+        y_fmt = lambda x: f"{x:.2f}" if pd.notna(x) else "-"
+        better = "min"
+    elif metric == "Verbrauch (kWh/Jahr)":
+        y_col = "jahresverbrauch_kwh"
+        y_title = "kWh/Jahr"
+        y_fmt = lambda x: f"{int(round(x)):,}".replace(",", "'") if pd.notna(x) else "-"
+        better = "min"
+    elif metric == "Emissionen pro m² (t CO₂e/m²)":
+        y_col = "emissionen_pro_m2"
+        y_title = "t CO₂e/m²"
+        y_fmt = lambda x: f"{x:.4f}" if pd.notna(x) else "-"
+        better = "min"
+    else:
+        y_col = "verbrauch_pro_m2"
+        y_title = "kWh/m²"
+        y_fmt = lambda x: f"{x:.1f}" if pd.notna(x) else "-"
+        better = "min"
+
+    plot_df = vdf[["gebaeude_id", "heizung_typ", y_col]].copy()
+    if sort_on != "keine":
+        plot_df = plot_df.sort_values(y_col, ascending=(sort_on == "aufsteigend"))
+
+    if normalize:
+        vals = plot_df[y_col].astype(float)
+        vmin, vmax = vals.min(), vals.max()
+        if pd.notna(vmin) and pd.notna(vmax) and vmax != vmin:
+            plot_df["y_plot"] = (vals - vmin) / (vmax - vmin)
+        else:
+            plot_df["y_plot"] = 0.0
+        y_plot_col = "y_plot"
+        y_axis_title = "normalisiert (0–1)"
+    else:
+        y_plot_col = y_col
+        y_axis_title = y_title
+
+    # Farben (nur Gruen)
+    heiz_order = list(plot_df["heizung_typ"].dropna().unique())
+    green_palette = [GREEN_DARK, GREEN_MAIN, GREEN_MED, GREEN_LIGHT]
+    heiz_color_map = {h: green_palette[i % len(green_palette)] for i, h in enumerate(heiz_order)}
+
+    # Tabelle (formatiert)
+    table_cols = [
+        "gebaeude_id",
+        "heizung_typ",
+        "jahresverbrauch_kwh",
+        "emissionen_gesamt_t",
+        "flaeche_m2",
+        "verbrauch_pro_m2",
+        "emissionen_pro_m2",
+    ]
+    table_cols = [c for c in table_cols if c in vdf.columns]
+    tdf = vdf[table_cols].copy()
+
+    if "jahresverbrauch_kwh" in tdf.columns:
+        tdf["jahresverbrauch_kwh"] = tdf["jahresverbrauch_kwh"].apply(lambda x: f"{int(round(x)):,}".replace(",", "'") if pd.notna(x) else "-")
+    if "emissionen_gesamt_t" in tdf.columns:
+        tdf["emissionen_gesamt_t"] = tdf["emissionen_gesamt_t"].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "-")
+    if "flaeche_m2" in tdf.columns:
+        tdf["flaeche_m2"] = tdf["flaeche_m2"].apply(lambda x: f"{int(round(x)):,}".replace(",", "'") if pd.notna(x) else "-")
+    if "verbrauch_pro_m2" in tdf.columns:
+        tdf["verbrauch_pro_m2"] = tdf["verbrauch_pro_m2"].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "-")
+    if "emissionen_pro_m2" in tdf.columns:
+        tdf["emissionen_pro_m2"] = tdf["emissionen_pro_m2"].apply(lambda x: f"{x:.4f}" if pd.notna(x) else "-")
+
+    st.dataframe(tdf, use_container_width=True)
+
+    # Balkenplot
+    st.subheader("Vergleich")
     fig = px.bar(
-        vdf,
+        plot_df,
         x="gebaeude_id",
-        y="emissionen_gesamt_t",
+        y=y_plot_col,
         color="heizung_typ",
+        color_discrete_map=heiz_color_map,
         template=PLOTLY_TEMPLATE,
-        title="CO₂-Emissionen pro Gebäude",
+        title=f"{metric}",
+    )
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title=y_axis_title,
+        legend_title_text="Heizung",
+        bargap=0.25,
     )
     st.plotly_chart(fig, use_container_width=True)
 
+    # ------------------------------------------------------------
+    # Delta zum besten Gebäude (Prozent)
+    # ------------------------------------------------------------
+    st.subheader("Delta zum besten Gebäude")
+
+    base_series = vdf[["gebaeude_id", y_col]].dropna().copy()
+    if base_series.empty:
+        st.info("Für diese Kennzahl fehlen Werte.")
+    else:
+        if better == "min":
+            best_val = base_series[y_col].min()
+            best_id = base_series.loc[base_series[y_col].idxmin(), "gebaeude_id"]
+        else:
+            best_val = base_series[y_col].max()
+            best_id = base_series.loc[base_series[y_col].idxmax(), "gebaeude_id"]
+
+        delta_df = base_series.copy()
+        delta_df["best_gebaeude"] = best_id
+        delta_df["best_wert"] = best_val
+        delta_df["delta_prozent"] = ((delta_df[y_col] - best_val) / best_val) * 100 if best_val != 0 else 0
+
+        # Schön formatieren
+        delta_df["wert"] = delta_df[y_col].apply(y_fmt)
+        delta_df["delta_prozent"] = delta_df["delta_prozent"].apply(lambda x: f"{x:+.1f}%" if pd.notna(x) else "-")
+
+        # Sort: best oben
+        delta_df = delta_df.sort_values(y_col, ascending=(better == "min"))
+
+        st.caption(f"Bestes Gebäude: **{best_id}** ({y_fmt(best_val)} {y_title})")
+        st.dataframe(delta_df[["gebaeude_id", "wert", "delta_prozent"]], use_container_width=True)
+
+    # ------------------------------------------------------------
+    # Spider / Radar (3–4 Kennzahlen)
+    # ------------------------------------------------------------
+    st.subheader("Spider/Radar (normalisiert)")
+
+    # Kennzahlen, die wir im Radar zeigen wollen
+    # Emissionen/Verbrauch pro m² nur wenn Fläche vorhanden
+    radar_metrics = [
+        ("Emissionen", "emissionen_gesamt_t"),
+        ("Verbrauch", "jahresverbrauch_kwh"),
+    ]
+    if "flaeche_m2" in vdf.columns:
+        radar_metrics += [
+            ("Emissionen pro m²", "emissionen_pro_m2"),
+            ("Verbrauch pro m²", "verbrauch_pro_m2"),
+        ]
+
+    # Optional: Investition (wenn vorhanden)
+    invest_cols = [c for c in ["investition_netto_chf", "investition_chf", "investition"] if c in vdf.columns]
+    if invest_cols:
+        radar_metrics += [("Investition", invest_cols[0])]
+
+    # Auswahl 3–4 Kennzahlen
+    options = [name for name, _ in radar_metrics]
+    default_sel = options[:4] if len(options) >= 4 else options
+    chosen = st.multiselect("Radar-Kennzahlen (3–4)", options, default=default_sel)
+
+    if len(chosen) < 3:
+        st.info("Bitte mindestens 3 Kennzahlen für den Radar auswählen.")
+        return
+
+    chosen = chosen[:4]
+    chosen_cols = [col for name, col in radar_metrics if name in chosen]
+    chosen_names = [name for name, col in radar_metrics if name in chosen]
+
+    radar_df = vdf[["gebaeude_id"] + chosen_cols].copy()
+
+    # Normalisieren pro Kennzahl (0–1), kleiner = besser -> invertieren
+    # Für Emissionen/Verbrauch gilt: kleiner ist besser
+    invert_if = set(["emissionen_gesamt_t", "jahresverbrauch_kwh", "emissionen_pro_m2", "verbrauch_pro_m2"] + invest_cols)
+
+    for col in chosen_cols:
+        vals = radar_df[col].astype(float)
+        vmin, vmax = vals.min(), vals.max()
+        if pd.isna(vmin) or pd.isna(vmax) or vmax == vmin:
+            radar_df[col] = 0.0
+        else:
+            norm = (vals - vmin) / (vmax - vmin)
+            radar_df[col] = (1 - norm) if col in invert_if else norm
+
+    # Plotly Radar
+    fig_r = go.Figure()
+    for i, gid in enumerate(radar_df["gebaeude_id"].tolist()):
+        r_vals = radar_df.loc[radar_df["gebaeude_id"] == gid, chosen_cols].iloc[0].tolist()
+        r_vals = r_vals + [r_vals[0]]
+        theta = chosen_names + [chosen_names[0]]
+
+        fig_r.add_trace(
+            go.Scatterpolar(
+                r=r_vals,
+                theta=theta,
+                fill="toself",
+                name=gid,
+            )
+        )
+
+    fig_r.update_layout(
+        template=PLOTLY_TEMPLATE,
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 1]),
+        ),
+        showlegend=True,
+        title="Radar: 1.0 = besser (normalisiert)",
+    )
+    st.plotly_chart(fig_r, use_container_width=True)
 
 def main():
     st.markdown('<div class="main-header">☘︎ CO₂ Portfolio Calculator</div>', unsafe_allow_html=True)
