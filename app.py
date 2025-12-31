@@ -1,21 +1,13 @@
 """
 CO2 Portfolio Calculator - Streamlit Web App
 HSLU Digital Twin Programmieren | Nicola Beeli & Mattia Rohrer
-
-Hinweis:
-- Pro Gebaeude wird in der Portfolio-Uebersicht ein Bild angezeigt.
-- Bilder liegen unter: data/images/<gebaeude_id>.jpg oder .jpeg
-- Keine Standort-Karte (Map) enthalten.
 """
 
 from pathlib import Path
-import logging
-
 import pandas as pd
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
-from PIL import Image  # Pillow
 
 from emissionen import (
     validiere_eingabedaten,
@@ -29,31 +21,27 @@ from benchmarks import vergleiche_mit_standards
 from portfolio import analysiere_portfolio
 
 
-# -----------------------------
-# Logging
-# -----------------------------
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-logger = logging.getLogger(__name__)
-
-# -----------------------------
+# ------------------------------------------------------------
 # Pfade
-# -----------------------------
+# ------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 CSV_INPUT = DATA_DIR / "beispiel_emissionen_mit_jahr.csv"
 IMAGES_DIR = DATA_DIR / "images"
 
 
-# -----------------------------
+# ------------------------------------------------------------
 # Design System (Gruen)
-# -----------------------------
+# ------------------------------------------------------------
 GREEN_DARK = "#1B5E20"
 GREEN_MAIN = "#2E7D32"
 GREEN_MED = "#66BB6A"
 GREEN_LIGHT = "#A5D6A7"
 
 GRAY_900 = "#263238"
+GRAY_700 = "#455A64"
 GRAY_600 = "#607D8B"
+GRAY_200 = "#E5E7EB"
 GRAY_100 = "#ECEFF1"
 WHITE = "#FFFFFF"
 
@@ -73,15 +61,12 @@ def get_category_color_map(categories):
     """Mappt beliebige Kategorien auf wenige Gruentoene."""
     fallback = [GREEN_DARK, GREEN_MAIN, GREEN_MED, GREEN_LIGHT]
     cats = list(pd.Series(categories).dropna().unique())
-    mapping = {}
-    for i, c in enumerate(cats):
-        mapping[c] = fallback[i % len(fallback)]
-    return mapping
+    return {c: fallback[i % len(fallback)] for i, c in enumerate(cats)}
 
 
-# -----------------------------
-# Streamlit Page Config
-# -----------------------------
+# ------------------------------------------------------------
+# Streamlit Config
+# ------------------------------------------------------------
 st.set_page_config(
     page_title="CO2 Portfolio Calculator",
     page_icon="☘︎",
@@ -89,12 +74,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# -----------------------------
-# CSS: Gruen statt Rot/Blau (UI)
-# -----------------------------
+# ------------------------------------------------------------
+# CSS: Gruen statt Rot/Blau (robust fuer Streamlit/BaseWeb)
+# ------------------------------------------------------------
 st.markdown(
     f"""
 <style>
+/* ---------- Global Variables ---------- */
 :root {{
   --green-dark:  {GREEN_DARK};
   --green-main:  {GREEN_MAIN};
@@ -102,20 +88,29 @@ st.markdown(
   --green-light: {GREEN_LIGHT};
 
   --gray-900: {GRAY_900};
+  --gray-700: {GRAY_700};
   --gray-600: {GRAY_600};
+  --gray-200: {GRAY_200};
   --gray-100: {GRAY_100};
   --white:    {WHITE};
 }}
 
+/* ---------- App Base ---------- */
 html, body, [data-testid="stAppViewContainer"] {{
   background: var(--white) !important;
   color: var(--gray-900) !important;
 }}
-
 section[data-testid="stSidebar"] {{
   background: var(--gray-100) !important;
 }}
+a, a:visited {{
+  color: var(--green-main) !important;
+}}
+a:hover {{
+  color: var(--green-dark) !important;
+}}
 
+/* ---------- Header ---------- */
 .main-header {{
   font-size: 2.6rem;
   font-weight: 900;
@@ -131,57 +126,72 @@ section[data-testid="stSidebar"] {{
   font-weight: 700;
 }}
 
+/* ---------- Metrics ---------- */
 div[data-testid="stMetric"] {{
   background: var(--white);
-  border: 1px solid #E5E7EB;
+  border: 1px solid var(--gray-200);
   border-left: 6px solid var(--green-main);
   border-radius: 14px;
   padding: 12px 12px 8px 12px;
 }}
 
-/* MULTISELECT TAGS: Rot -> Gruen */
-div[data-baseweb="tag"],
-div[data-baseweb="tag"] > span {{
+/* ==========================================================
+   SIDEBAR: Rot/Blau entfernen
+   ========================================================== */
+
+/* 1) Radio: Kreis + Akzent */
+div[data-testid="stSidebar"] div[data-testid="stRadio"] input[type="radio"] {{
+  accent-color: var(--green-main) !important;
+}}
+
+/* 2) Slider: Griff + gefuellter Track */
+div[data-testid="stSidebar"] div[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {{
+  background: var(--green-main) !important;
+}}
+/* Slider Text nicht rot */
+div[data-testid="stSidebar"] div[data-testid="stSlider"] * {{
+  color: var(--gray-900) !important;
+}}
+
+/* 3) Select/Dropdown: Fokus Rahmen */
+div[data-testid="stSidebar"] div[data-baseweb="select"] > div {{
+  border-color: rgba(46,125,50,0.55) !important;
+}}
+div[data-testid="stSidebar"] div[data-baseweb="select"] > div:focus-within {{
+  border-color: var(--green-main) !important;
+  box-shadow: 0 0 0 2px rgba(46,125,50,0.25) !important;
+}}
+
+/* 4) Multiselect Tags (Chips): Hintergrund + Text */
+div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[data-baseweb="tag"] {{
   background-color: var(--green-med) !important;
   color: var(--white) !important;
   border-radius: 10px !important;
   font-weight: 800 !important;
+  border: 0 !important;
 }}
-div[data-baseweb="tag"] svg {{
+div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[data-baseweb="tag"] * {{
+  color: var(--white) !important;
+}}
+div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[data-baseweb="tag"] svg {{
   fill: var(--white) !important;
 }}
 
-/* SELECT / DROPDOWN Fokus: Blau -> Gruen */
-div[data-baseweb="select"] > div {{
-  border-color: rgba(46,125,50,0.55) !important;
+/* Manche Streamlit-Versionen rendern Chips als role="button" */
+div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] span[role="button"],
+div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[role="button"] {{
+  background-color: var(--green-med) !important;
+  color: var(--white) !important;
+  border-radius: 10px !important;
+  font-weight: 800 !important;
+  border: 0 !important;
 }}
-div[data-baseweb="select"] > div:focus-within {{
-  box-shadow: 0 0 0 2px rgba(46,125,50,0.25) !important;
-  border-color: var(--green-main) !important;
-}}
-
-/* SLIDER: Rot -> Gruen + Text dunkel */
-div[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {{
-  background: var(--green-main) !important;
-}}
-div[data-testid="stSlider"] * {{
-  color: var(--gray-900) !important;
+div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] span[role="button"] svg,
+div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[role="button"] svg {{
+  fill: var(--white) !important;
 }}
 
-/* RADIO: Akzent Gruen */
-div[data-testid="stRadio"] input[type="radio"] {{
-  accent-color: var(--green-main) !important;
-}}
-
-/* LINKS: Blau -> Gruen */
-a, a:visited {{
-  color: var(--green-main) !important;
-}}
-a:hover {{
-  color: var(--green-dark) !important;
-}}
-
-/* Fokus ruhig */
+/* 5) Entferne harte Fokus/Outline Effekte */
 *:focus {{
   outline: none !important;
   box-shadow: none !important;
@@ -192,11 +202,10 @@ a:hover {{
 )
 
 
-# -----------------------------
+# ------------------------------------------------------------
 # Utilities
-# -----------------------------
-def format_number_swiss(value):
-    """Formatiert Zahlen im Schweizer Format mit Apostrophen."""
+# ------------------------------------------------------------
+def format_number_swiss(value) -> str:
     try:
         value = float(value)
     except Exception:
@@ -204,8 +213,7 @@ def format_number_swiss(value):
     return f"{int(round(value)): ,}".replace(",", "").replace(" ", "'")
 
 
-def parse_swiss_number(text):
-    """Konvertiert Schweizer Format (mit Apostrophen) zurueck zu Zahl."""
+def parse_swiss_number(text: str) -> int:
     if not text:
         return 0
     cleaned = str(text).replace("'", "").replace(" ", "").replace(",", "")
@@ -216,16 +224,11 @@ def parse_swiss_number(text):
 
 
 def lade_daten() -> pd.DataFrame | None:
-    """Laedt Input-CSV und validiert."""
     if not CSV_INPUT.exists():
         st.error(f"CSV-Datei nicht gefunden: {CSV_INPUT}")
         return None
 
-    try:
-        df = pd.read_csv(CSV_INPUT, encoding="utf-8")
-    except Exception as e:
-        st.error(f"Fehler beim Laden der CSV: {e}")
-        return None
+    df = pd.read_csv(CSV_INPUT, encoding="utf-8")
 
     fehler = validiere_eingabedaten(df)
     if fehler:
@@ -243,15 +246,13 @@ def lade_daten() -> pd.DataFrame | None:
 
 def finde_gebaeude_bildpfad(gebaeude_id: str) -> Path | None:
     """
-    Sucht Bild passend zur gebaeude_id in data/images.
+    Findet Bilddatei in data/images.
     Unterstuetzt: jpg, jpeg, png, webp
     """
     if not IMAGES_DIR.exists():
         return None
 
     gid = str(gebaeude_id).strip()
-
-    # Optional: falls Dateinamen Leerzeichen statt Unterstrich haben
     kandidaten = [gid, gid.replace(" ", "_")]
 
     for base in kandidaten:
@@ -262,16 +263,15 @@ def finde_gebaeude_bildpfad(gebaeude_id: str) -> Path | None:
     return None
 
 
-def zeige_bild_oder_placeholder(gebaeude_id: str, height: int = 160):
-    """Zeigt Bild falls vorhanden, sonst Placeholder."""
+def zeige_bild_oder_placeholder(gebaeude_id: str, height: int = 260):
+    """
+    Zeigt Bild (ohne Pillow-Abhaengigkeit) oder Placeholder.
+    """
     p = finde_gebaeude_bildpfad(gebaeude_id)
     if p:
-        try:
-            img = Image.open(p)
-            st.image(img, use_container_width=True)
-            return
-        except Exception:
-            pass
+        # st.image kann Pfad als string direkt anzeigen
+        st.image(str(p), use_container_width=True)
+        return
 
     st.markdown(
         f"""
@@ -285,16 +285,16 @@ def zeige_bild_oder_placeholder(gebaeude_id: str, height: int = 160):
             justify-content:center;
             color:{GRAY_600};
             font-weight:800;">
-            Kein Bild: {gebaeude_id}
+            Kein Bild gefunden: {gebaeude_id}
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-# -----------------------------
+# ------------------------------------------------------------
 # Pages
-# -----------------------------
+# ------------------------------------------------------------
 def page_portfolio_uebersicht(df: pd.DataFrame):
     st.header("▦ Portfolio-Uebersicht")
 
@@ -339,8 +339,8 @@ def page_portfolio_uebersicht(df: pd.DataFrame):
     fig.update_layout(margin=dict(t=60, b=20, l=20, r=20), legend_title_text="Heizung")
     st.plotly_chart(fig, use_container_width=True)
 
-    # Galerie: pro Gebaeude ein Bild + Kennzahlen
     st.subheader("Gebaeude (Bilder)")
+
     cards_df = df_aktuell.sort_values("emissionen_gesamt_t", ascending=False).reset_index(drop=True)
 
     cols_per_row = 3
@@ -359,8 +359,7 @@ def page_portfolio_uebersicht(df: pd.DataFrame):
 
             with col:
                 with st.container(border=True):
-                    zeige_bild_oder_placeholder(gid, height=160)
-
+                    zeige_bild_oder_placeholder(gid, height=170)
                     st.markdown(f"### {gid}")
                     st.write(f"**Heizung:** {row.get('heizung_typ', '-')}")
                     st.write(f"**Emissionen:** {row.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
@@ -376,16 +375,16 @@ def page_gebaeude_analyse(df: pd.DataFrame):
     df_aktuell = df[df["jahr"] == df["jahr"].max()].copy()
     df_aktuell = berechne_emissionen(df_aktuell)
 
-    gebaeude_id = st.sidebar.selectbox("Gebaeude auswaehlen", list(df_aktuell["gebaeude_id"].unique()))
+    gebaeude_id = st.sidebar.selectbox(
+        "Gebaeude auswaehlen",
+        list(df_aktuell["gebaeude_id"].unique()),
+    )
     gebaeude = df_aktuell[df_aktuell["gebaeude_id"] == gebaeude_id].iloc[0]
 
     st.header(f"⌂ {gebaeude_id}")
 
-    # -------------------------------------------------------
-    # WICHTIG: Bild an die Position der Emissionen verschieben
-    # (Bild zuerst, danach Kennzahlen)
-    # -------------------------------------------------------
-    zeige_bild_oder_placeholder(gebaeude_id, height=260)
+    # Bild an Position "oben" (statt Emissionen-Block)
+    zeige_bild_oder_placeholder(gebaeude_id, height=300)
     st.markdown("---")
 
     c1, c2, c3 = st.columns(3)
@@ -398,21 +397,16 @@ def page_gebaeude_analyse(df: pd.DataFrame):
                 pass
 
     with c2:
-        st.write(
-            "**Verbrauch Heizen:**",
-            f"{format_number_swiss(gebaeude.get('jahresverbrauch_kwh', 0))} kWh/Jahr",
-        )
-        st.write(
-            "**Strom:**",
-            f"{format_number_swiss(gebaeude.get('strom_kwh_jahr', 0))} kWh/Jahr",
-        )
+        st.write("**Verbrauch:**", f"{format_number_swiss(gebaeude.get('jahresverbrauch_kwh', 0))} kWh/Jahr")
+        if "flaeche_m2" in gebaeude and pd.notna(gebaeude["flaeche_m2"]):
+            st.write("**Flaeche:**", f"{format_number_swiss(gebaeude.get('flaeche_m2', 0))} m²")
 
     with c3:
         st.metric("Emissionen", f"{gebaeude.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
 
-    # Benchmarks (falls Flaeche vorhanden)
+    # Benchmark
     if "flaeche_m2" in gebaeude and pd.notna(gebaeude["flaeche_m2"]) and gebaeude["flaeche_m2"] > 0:
-        st.subheader("Benchmark-Vergleich")
+        st.subheader("|—| Benchmark-Vergleich")
         standards_df = vergleiche_mit_standards(gebaeude, gebaeude.get("emissionen_gesamt_kg", 0))
         if isinstance(standards_df, pd.DataFrame) and not standards_df.empty:
             st.dataframe(standards_df, use_container_width=True)
@@ -427,7 +421,7 @@ def page_gebaeude_analyse(df: pd.DataFrame):
     szen_wirtschaft = [wirtschaftlichkeitsanalyse(san, gebaeude) for san in alle]
     szen_df = priorisiere_sanierungen(szen_wirtschaft, kriterium="score")
 
-    # Filter (Sidebar)
+    # Sidebar Filter
     st.sidebar.subheader("Filter")
 
     if "kategorie" in szen_df.columns:
@@ -508,14 +502,13 @@ def page_gebaeude_analyse(df: pd.DataFrame):
     show_cols = [c for c in show_cols if c in szen_f.columns]
     st.dataframe(szen_f[show_cols], use_container_width=True)
 
-    # Scatter: Investition vs CO2
+    # Kosten-Nutzen
     if (
         "investition_netto_chf" in szen_f.columns
         and "co2_einsparung_kg_jahr" in szen_f.columns
         and len(szen_f) > 0
     ):
         st.subheader("Kosten-Nutzen-Analyse")
-
         cat_map = get_category_color_map(szen_f["kategorie"]) if "kategorie" in szen_f.columns else None
 
         fig = px.scatter(
@@ -560,7 +553,6 @@ def page_gebaeude_analyse(df: pd.DataFrame):
                     marker=dict(size=7),
                 )
             )
-
             if "npv_chf" in sens_df.columns:
                 fig2.add_trace(
                     go.Scatter(
@@ -625,9 +617,9 @@ def page_vergleich(df: pd.DataFrame):
     st.plotly_chart(fig, use_container_width=True)
 
 
-# -----------------------------
+# ------------------------------------------------------------
 # Main
-# -----------------------------
+# ------------------------------------------------------------
 def main():
     st.markdown('<div class="main-header">☘︎ CO₂ Portfolio Calculator</div>', unsafe_allow_html=True)
     st.markdown(
@@ -636,7 +628,10 @@ def main():
     )
 
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Seite auswaehlen", ["Portfolio-Uebersicht", "Gebaeude-Analyse", "Vergleich"])
+    page = st.sidebar.radio(
+        "Seite auswaehlen",
+        ["Portfolio-Uebersicht", "Gebaeude-Analyse", "Vergleich"],
+    )
 
     df = lade_daten()
     if df is None:
