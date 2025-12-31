@@ -244,12 +244,26 @@ def lade_daten() -> pd.DataFrame | None:
 
 
 def finde_gebaeude_bildpfad(gebaeude_id: str) -> Path | None:
-    """Sucht JPG-Bild passend zur gebaeude_id in data/images."""
+    """
+    Sucht Bild passend zur gebaeude_id in data/images.
+    Unterstuetzt: jpg, jpeg, png, webp
+    """
     if not IMAGES_DIR.exists():
         return None
+
     gid = str(gebaeude_id).strip()
-    p = IMAGES_DIR / f"{gid}.jpg"
-    return p if p.exists() else None
+
+    # Falls jemand versehentlich Leerzeichen im Dateinamen nutzt:
+    # (optional, aber harmless)
+    kandidaten = [gid, gid.replace(" ", "_")]
+
+    for base in kandidaten:
+        for ext in ["jpg", "jpeg", "png", "webp"]:
+            p = IMAGES_DIR / f"{base}.{ext}"
+            if p.exists():
+                return p
+
+    return None
 
 
 def zeige_bild_oder_placeholder(gebaeude_id: str, height: int = 160):
