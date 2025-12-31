@@ -73,38 +73,69 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS (ruhiger, weniger Kontrast, Gruen als Akzent)
-st.markdown(f"""
+# Custom CSS 
+st.markdown("""
 <style>
-    .main-header {{
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: {GREEN_MAIN};
-        text-align: center;
-        padding: 0.75rem 0 0.25rem 0;
-    }}
-    .sub-header {{
-        text-align: center;
-        color: {GRAY_MID};
-        margin-top: -0.25rem;
-        margin-bottom: 1rem;
-        font-weight: 600;
-    }}
-    /* Sidebar ruhiger */
-    section[data-testid="stSidebar"] {{
-        background-color: {GRAY_LIGHT};
-    }}
-    /* Kleine optische Anpassung fuer Metriken */
-    div[data-testid="stMetric"] {{
-        background: {WHITE};
-        border: 1px solid #E5E7EB;
-        border-left: 5px solid {GREEN_MAIN};
-        border-radius: 12px;
-        padding: 12px 12px 8px 12px;
-    }}
+/* ===============================
+   GLOBAL COLOR OVERRIDES
+   =============================== */
+
+/* Radio Buttons (Navigation links) */
+div[role="radiogroup"] > label > div:first-child {
+    background-color: #A5D6A7 !important;
+    border-color: #2E7D32 !important;
+}
+div[role="radiogroup"] > label[data-selected="true"] > div:first-child {
+    background-color: #2E7D32 !important;
+}
+
+/* Multiselect Tags (rote Felder!) */
+div[data-baseweb="tag"] {
+    background-color: #66BB6A !important;
+    color: white !important;
+    border-radius: 8px !important;
+    font-weight: 600;
+}
+div[data-baseweb="tag"] span {
+    color: white !important;
+}
+
+/* Multiselect Tag Close (X) */
+div[data-baseweb="tag"] svg {
+    fill: white !important;
+}
+
+/* Dropdown Auswahl / Fokus */
+div[data-baseweb="select"] > div {
+    border-color: #2E7D32 !important;
+}
+
+/* Slider Farbe */
+div[role="slider"] > div > div {
+    background-color: #2E7D32 !important;
+}
+
+/* Checkbox */
+input[type="checkbox"]:checked + div {
+    background-color: #2E7D32 !important;
+}
+
+/* Buttons */
+button[kind="primary"] {
+    background-color: #2E7D32 !important;
+}
+button[kind="secondary"] {
+    border-color: #2E7D32 !important;
+    color: #2E7D32 !important;
+}
+
+/* Fokus-Rahmen entfernen (ruhiger Look) */
+*:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
-
 
 def format_number_swiss(value):
     """Formatiert Zahlen im Schweizer Format mit Apostrophen."""
