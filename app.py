@@ -38,7 +38,7 @@ GRAY_MID = "#607D8B"
 GRAY_LIGHT = "#ECEFF1"
 WHITE = "#FFFFFF"
 
-# Einfache, konsistente Farb-Maps (weniger Farben, nur Gruentoene)
+# Einfache, konsistente Farb-Maps
 COLOR_MAP_HEIZUNG = {
     "Gas": GREEN_DARK,
     "Fernwärme": GREEN_MAIN,
@@ -76,66 +76,112 @@ st.set_page_config(
 # Custom CSS 
 st.markdown("""
 <style>
-/* ===============================
-   GLOBAL COLOR OVERRIDES
-   =============================== */
+:root{
+  --green-dark:  #1B5E20;
+  --green-main:  #2E7D32;
+  --green-med:   #66BB6A;
+  --green-light: #A5D6A7;
 
-/* Radio Buttons (Navigation links) */
-div[role="radiogroup"] > label > div:first-child {
-    background-color: #A5D6A7 !important;
-    border-color: #2E7D32 !important;
-}
-div[role="radiogroup"] > label[data-selected="true"] > div:first-child {
-    background-color: #2E7D32 !important;
-}
-
-/* Multiselect Tags (rote Felder!) */
-div[data-baseweb="tag"] {
-    background-color: #66BB6A !important;
-    color: white !important;
-    border-radius: 8px !important;
-    font-weight: 600;
-}
-div[data-baseweb="tag"] span {
-    color: white !important;
+  --gray-900: #263238;
+  --gray-600: #607D8B;
+  --gray-100: #ECEFF1;
+  --white:    #FFFFFF;
 }
 
-/* Multiselect Tag Close (X) */
-div[data-baseweb="tag"] svg {
-    fill: white !important;
+html, body, [data-testid="stAppViewContainer"]{
+  background: var(--white) !important;
+  color: var(--gray-900) !important;
 }
 
-/* Dropdown Auswahl / Fokus */
-div[data-baseweb="select"] > div {
-    border-color: #2E7D32 !important;
+section[data-testid="stSidebar"]{
+  background: var(--gray-100) !important;
 }
 
-/* Slider Farbe */
-div[role="slider"] > div > div {
-    background-color: #2E7D32 !important;
+
+div[data-baseweb="tag"],
+div[data-baseweb="tag"] > span{
+  background-color: var(--green-med) !important;
+  color: var(--white) !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
 }
 
-/* Checkbox */
-input[type="checkbox"]:checked + div {
-    background-color: #2E7D32 !important;
+div[data-baseweb="tag"] svg{
+  fill: var(--white) !important;
 }
 
-/* Buttons */
-button[kind="primary"] {
-    background-color: #2E7D32 !important;
-}
-button[kind="secondary"] {
-    border-color: #2E7D32 !important;
-    color: #2E7D32 !important;
+div[data-testid="stMultiSelect"] span[role="button"],
+div[data-testid="stMultiSelect"] div[role="button"]{
+  background-color: var(--green-med) !important;
+  color: var(--white) !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
 }
 
-/* Fokus-Rahmen entfernen (ruhiger Look) */
-*:focus {
-    box-shadow: none !important;
-    outline: none !important;
+div[data-baseweb="select"] > div{
+  border-color: rgba(46,125,50,0.55) !important;
+}
+
+div[data-baseweb="select"] > div:focus-within{
+  box-shadow: 0 0 0 2px rgba(46,125,50,0.25) !important;
+  border-color: var(--green-main) !important;
+}
+
+
+div[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"]{
+  background: var(--green-main) !important;
+}
+
+div[data-testid="stSlider"] [data-baseweb="slider"] div[aria-valuemin] ~ div{
+  background: var(--green-main) !important;
+}
+
+div[data-testid="stSlider"] *{
+  color: var(--gray-900) !important;
+}
+div[data-testid="stSlider"] p,
+div[data-testid="stSlider"] span{
+  color: var(--gray-900) !important;
+}
+
+
+div[data-testid="stRadio"] label{
+  color: var(--gray-900) !important;
+}
+div[data-testid="stRadio"] input[type="radio"]{
+  accent-color: var(--green-main) !important;
+}
+
+
+a, a:visited{
+  color: var(--green-main) !important;
+}
+a:hover{
+  color: var(--green-dark) !important;
+}
+
+/* Icons in Sidebar (Fragezeichen etc.) */
+svg, svg *{
+  stroke: currentColor !important;
+}
+
+button[kind="primary"]{
+  background: var(--green-main) !important;
+  border-color: var(--green-main) !important;
+}
+button[kind="secondary"]{
+  color: var(--green-main) !important;
+  border-color: var(--green-main) !important;
+}
+
+*:focus{
+  outline: none !important;
+  box-shadow: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 def format_number_swiss(value):
     """Formatiert Zahlen im Schweizer Format mit Apostrophen."""
