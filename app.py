@@ -1,6 +1,17 @@
 """
-CO2 Portfolio Calculator - Streamlit Web App
+MAIN (Entry-Point) – CO2 Portfolio Calculator - Streamlit Web App
 HSLU Digital Twin Programmieren | Nicola Beeli & Mattia Rohrer
+
+WICHTIGE AENDERUNGEN (wie gewuenscht):
+- Gebaeude-Analyse: Ausgangsdaten LINKS als Textzeilen (inkl. Emissionen), Bild RECHTS klein (fixe Breite).
+- KEIN grosses Bild oben (keine volle Breite).
+- Sidebar: Tags (Multiselect), Radio, Slider, Links -> Gruen (robuste CSS Overrides).
+- Bilder liegen unter: data/images/<gebaeude_id>.(jpg|jpeg|png|webp)
+- Keine Standort-Karte.
+
+Hinweis:
+Wenn bei dir vorher "keine Aenderung" kam, lag es sehr wahrscheinlich daran, dass Streamlit eine andere Datei gestartet hat.
+Mit diesem File startest du sicher richtig via: streamlit run main.py
 """
 
 from pathlib import Path
@@ -20,11 +31,19 @@ from empfehlungen import priorisiere_sanierungen
 from benchmarks import vergleiche_mit_standards
 from portfolio import analysiere_portfolio
 
+
+# ------------------------------------------------------------
+# Pfade
+# ------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 CSV_INPUT = DATA_DIR / "beispiel_emissionen_mit_jahr.csv"
 IMAGES_DIR = DATA_DIR / "images"
 
+
+# ------------------------------------------------------------
+# Design System (Gruen)
+# ------------------------------------------------------------
 GREEN_DARK = "#1B5E20"
 GREEN_MAIN = "#2E7D32"
 GREEN_MED = "#66BB6A"
@@ -50,11 +69,14 @@ COLOR_MAP_HEIZUNG = {
 
 
 def get_category_color_map(categories):
-    """Mappt beliebige Kategorien auf wenige Gruentoene."""
     fallback = [GREEN_DARK, GREEN_MAIN, GREEN_MED, GREEN_LIGHT]
     cats = list(pd.Series(categories).dropna().unique())
     return {c: fallback[i % len(fallback)] for i, c in enumerate(cats)}
 
+
+# ------------------------------------------------------------
+# Streamlit Config
+# ------------------------------------------------------------
 st.set_page_config(
     page_title="CO2 Portfolio Calculator",
     page_icon="☘︎",
@@ -62,92 +84,117 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ------------------------------------------------------------
+# CSS: Rot/Blau -> Gruen (robust)
+# ------------------------------------------------------------
 st.markdown(
     f"""
 <style>
+/* ----- Force Streamlit theme vars (hilft gegen Blau/Rot Defaults) ----- */
 :root {{
-  --green-dark:  {GREEN_DARK};
-  --green-main:  {GREEN_MAIN};
-  --green-med:   {GREEN_MED};
-  --green-light: {GREEN_LIGHT};
-
-  --gray-900: {GRAY_900};
-  --gray-700: {GRAY_700};
-  --gray-600: {GRAY_600};
-  --gray-200: {GRAY_200};
-  --gray-100: {GRAY_100};
-  --white:    {WHITE};
+  --primary-color: {GREEN_MAIN};
+  --secondary-background-color: {GRAY_100};
+  --text-color: {GRAY_900};
 }}
 
+/* ----- Base Layout ----- */
 html, body, [data-testid="stAppViewContainer"] {{
-  background: var(--white) !important;
-  color: var(--gray-900) !important;
+  background: {WHITE} !important;
+  color: {GRAY_900} !important;
 }}
 section[data-testid="stSidebar"] {{
-  background: var(--gray-100) !important;
+  background: {GRAY_100} !important;
 }}
-a, a:visited {{ color: var(--green-main) !important; }}
-a:hover {{ color: var(--green-dark) !important; }}
 
+/* ----- Headings ----- */
 .main-header {{
   font-size: 2.6rem;
   font-weight: 900;
-  color: var(--green-main);
+  color: {GREEN_MAIN};
   text-align: center;
   padding: 0.75rem 0 0.25rem 0;
 }}
 .sub-header {{
   text-align: center;
-  color: var(--gray-600);
+  color: {GRAY_600};
   margin-top: -0.25rem;
   margin-bottom: 1rem;
   font-weight: 700;
 }}
 
-div[data-testid="stSidebar"] div[data-testid="stRadio"] input[type="radio"] {{
-  accent-color: var(--green-main) !important;
+/* ----- Links (Blau -> Gruen) ----- */
+a, a:visited {{
+  color: {GREEN_MAIN} !important;
+}}
+a:hover {{
+  color: {GREEN_DARK} !important;
 }}
 
-div[data-testid="stSidebar"] div[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {{
-  background: var(--green-main) !important;
-}}
-div[data-testid="stSidebar"] div[data-testid="stSlider"] * {{
-  color: var(--gray-900) !important;
+/* ==========================================================
+   SIDEBAR CONTROLS (Multiselect Tags / Radio / Slider)
+   ========================================================== */
+
+/* Radio circle (rot -> gruen) */
+section[data-testid="stSidebar"] input[type="radio"] {{
+  accent-color: {GREEN_MAIN} !important;
 }}
 
-div[data-testid="stSidebar"] div[data-baseweb="select"] > div {{
+/* Slider thumb/track (rot -> gruen) */
+section[data-testid="stSidebar"] div[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {{
+  background: {GREEN_MAIN} !important;
+}}
+/* Slider value text (nicht rot) */
+section[data-testid="stSidebar"] div[data-testid="stSlider"] * {{
+  color: {GRAY_900} !important;
+}}
+
+/* Select focus border */
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div {{
   border-color: rgba(46,125,50,0.55) !important;
 }}
-div[data-testid="stSidebar"] div[data-baseweb="select"] > div:focus-within {{
-  border-color: var(--green-main) !important;
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div:focus-within {{
+  border-color: {GREEN_MAIN} !important;
   box-shadow: 0 0 0 2px rgba(46,125,50,0.25) !important;
 }}
 
-div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[data-baseweb="tag"] {{
-  background-color: var(--green-med) !important;
-  color: var(--white) !important;
+/* Multiselect tags (rot -> gruen) - BaseWeb Tag */
+section[data-testid="stSidebar"] div[data-baseweb="tag"] {{
+  background-color: {GREEN_MED} !important;
+  color: {WHITE} !important;
+  border: 0 !important;
   border-radius: 10px !important;
   font-weight: 800 !important;
-  border: 0 !important;
 }}
-div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[data-baseweb="tag"] * {{
-  color: var(--white) !important;
+section[data-testid="stSidebar"] div[data-baseweb="tag"] * {{
+  color: {WHITE} !important;
 }}
-div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[data-baseweb="tag"] svg {{
-  fill: var(--white) !important;
-}}
-div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] span[role="button"],
-div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[role="button"] {{
-  background-color: var(--green-med) !important;
-  color: var(--white) !important;
-  border-radius: 10px !important;
-  font-weight: 800 !important;
-  border: 0 !important;
+section[data-testid="stSidebar"] div[data-baseweb="tag"] svg {{
+  fill: {WHITE} !important;
 }}
 
+/* Alternative tag rendering in some versions */
+section[data-testid="stSidebar"] div[data-testid="stMultiSelect"] span[role="button"],
+section[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[role="button"] {{
+  background-color: {GREEN_MED} !important;
+  color: {WHITE} !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  font-weight: 800 !important;
+}}
+section[data-testid="stSidebar"] div[data-testid="stMultiSelect"] span[role="button"] *,
+section[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[role="button"] * {{
+  color: {WHITE} !important;
+}}
+
+/* Fokus ruhig */
+*:focus {{
+  outline: none !important;
+  box-shadow: none !important;
+}}
+
+/* Bild rechts: runde Ecken */
 .img-right img {{
   border-radius: 14px;
-  height: 220px !important;
   object-fit: cover !important;
 }}
 </style>
@@ -156,6 +203,9 @@ div[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[role="button"]
 )
 
 
+# ------------------------------------------------------------
+# Utilities
+# ------------------------------------------------------------
 def format_number_swiss(value) -> str:
     try:
         value = float(value)
@@ -174,10 +224,11 @@ def parse_swiss_number(text: str) -> int:
         return 0
 
 
-def lade_daten() -> pd.DataFrame | None:
+def lade_daten() -> pd.DataFrame:
     if not CSV_INPUT.exists():
         st.error(f"CSV-Datei nicht gefunden: {CSV_INPUT}")
-        return None
+        st.stop()
+
     df = pd.read_csv(CSV_INPUT, encoding="utf-8")
 
     fehler = validiere_eingabedaten(df)
@@ -190,6 +241,7 @@ def lade_daten() -> pd.DataFrame | None:
         kritische = [f for f in fehler if "Fehlende" in f or "Negative" in f]
         if kritische:
             st.stop()
+
     return df
 
 
@@ -206,16 +258,20 @@ def finde_gebaeude_bildpfad(gebaeude_id: str) -> Path | None:
     return None
 
 
-def zeige_bild_rechts(gebaeude_id: str):
+def zeige_bild_klein_rechts(gebaeude_id: str, width: int = 300, height: int = 200):
+    """
+    Zeigt Bild klein rechts (fixe Breite), nicht als volle Spaltenbreite.
+    """
     p = finde_gebaeude_bildpfad(gebaeude_id)
     st.markdown('<div class="img-right">', unsafe_allow_html=True)
     if p:
-        st.image(str(p), use_container_width=True)
+        st.image(str(p), width=width)
     else:
         st.markdown(
             f"""
             <div style="
-                height:220px;
+                width:{width}px;
+                height:{height}px;
                 border:1px dashed {GREEN_LIGHT};
                 border-radius:14px;
                 background:#F5F7F6;
@@ -232,7 +288,9 @@ def zeige_bild_rechts(gebaeude_id: str):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-
+# ------------------------------------------------------------
+# Pages
+# ------------------------------------------------------------
 def page_portfolio_uebersicht(df: pd.DataFrame):
     st.header("▦ Portfolio-Uebersicht")
 
@@ -286,7 +344,6 @@ def page_portfolio_uebersicht(df: pd.DataFrame):
             gid = row["gebaeude_id"]
             with col:
                 with st.container(border=True):
-                    # Hier darf es breit sein, weil es in der Karte sitzt
                     p = finde_gebaeude_bildpfad(gid)
                     if p:
                         st.image(str(p), use_container_width=True)
@@ -323,50 +380,28 @@ def page_gebaeude_analyse(df: pd.DataFrame):
 
     st.header(f"⌂ {gebaeude_id}")
 
-    # Layout: Ausgangsdaten links, Bild rechts (klein)
-col_data, col_img = st.columns([4, 2], vertical_alignment="top")
+    # ---- GENAU WIE GEWUENSCHT: Daten links, Bild klein rechts ----
+    col_data, col_img = st.columns([4, 2], vertical_alignment="top")
 
-with col_data:
-    # Alles gleich darstellen (einheitlich als Textzeilen)
-    st.write(f"**Heizung:** {gebaeude.get('heizung_typ', '-')}")
-    if "baujahr" in gebaeude:
-        try:
-            st.write(f"**Baujahr:** {int(gebaeude['baujahr'])}")
-        except Exception:
-            pass
+    with col_data:
+        st.write(f"**Heizung:** {gebaeude.get('heizung_typ', '-')}")
+        if "baujahr" in gebaeude:
+            try:
+                st.write(f"**Baujahr:** {int(gebaeude['baujahr'])}")
+            except Exception:
+                pass
 
-    st.write(f"**Verbrauch:** {format_number_swiss(gebaeude.get('jahresverbrauch_kwh', 0))} kWh/Jahr")
+        st.write(f"**Verbrauch:** {format_number_swiss(gebaeude.get('jahresverbrauch_kwh', 0))} kWh/Jahr")
 
-    if "flaeche_m2" in gebaeude and pd.notna(gebaeude["flaeche_m2"]):
-        st.write(f"**Flaeche:** {format_number_swiss(gebaeude.get('flaeche_m2', 0))} m²")
+        if "flaeche_m2" in gebaeude and pd.notna(gebaeude["flaeche_m2"]):
+            st.write(f"**Flaeche:** {format_number_swiss(gebaeude.get('flaeche_m2', 0))} m²")
 
-    # Emissionen NICHT als metric, sondern gleich wie der Rest
-    st.write(f"**Emissionen:** {gebaeude.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
+        # Emissionen gleich wie der Rest (KEIN st.metric!)
+        st.write(f"**Emissionen:** {gebaeude.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
 
-with col_img:
-    # Bild klein (nicht volle Spaltenbreite!)
-    p = finde_gebaeude_bildpfad(gebaeude_id)
-    if p:
-        st.image(str(p), width=280)  # <- fix: klein rechts
-    else:
-        st.markdown(
-            f"""
-            <div style="
-                width:280px;
-                height:200px;
-                border:1px dashed {GREEN_LIGHT};
-                border-radius:14px;
-                background:#F5F7F6;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                color:{GRAY_600};
-                font-weight:800;">
-                Kein Bild: {gebaeude_id}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    with col_img:
+        zeige_bild_klein_rechts(gebaeude_id, width=320, height=220)
+
     st.markdown("---")
 
     # Benchmark
@@ -386,7 +421,7 @@ with col_img:
     szen_wirtschaft = [wirtschaftlichkeitsanalyse(san, gebaeude) for san in alle]
     szen_df = priorisiere_sanierungen(szen_wirtschaft, kriterium="score")
 
-    # Filter
+    # Sidebar Filter
     st.sidebar.subheader("Filter")
     if "kategorie" in szen_df.columns:
         kategorie_filter = st.sidebar.multiselect(
@@ -483,7 +518,6 @@ with col_img:
     if len(szen_f) > 0:
         with st.expander("Sensitivitaetsanalyse (Top-Empfehlung)"):
             top = szen_f.iloc[0].to_dict()
-
             parameter = st.selectbox(
                 "Szenario",
                 ["energiepreis", "co2_abgabe", "foerderung"],
@@ -493,7 +527,6 @@ with col_img:
                     "foerderung": "Foerdergelder",
                 }[x],
             )
-
             sens_df = sensitivitaetsanalyse(top, gebaeude, parameter)
 
             fig2 = go.Figure()
@@ -519,6 +552,7 @@ with col_img:
                         yaxis="y2",
                     )
                 )
+
             fig2.update_layout(
                 title=f"Sensitivitaet: {parameter}",
                 xaxis_title="Multiplikator (1.0 = Basis)",
@@ -570,6 +604,9 @@ def page_vergleich(df: pd.DataFrame):
 # Main
 # ------------------------------------------------------------
 def main():
+    # Debug label, damit du sofort siehst, dass diese Datei laeuft
+    st.sidebar.caption("APP VERSION: MAIN-REPLACE-OK")
+
     st.markdown('<div class="main-header">☘︎ CO₂ Portfolio Calculator</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="sub-header">HSLU Digital Twin Programmieren | Nicola Beeli & Mattia Rohrer</div>',
@@ -580,8 +617,6 @@ def main():
     page = st.sidebar.radio("Seite auswaehlen", ["Portfolio-Uebersicht", "Gebaeude-Analyse", "Vergleich"])
 
     df = lade_daten()
-    if df is None:
-        st.stop()
 
     if page == "Portfolio-Uebersicht":
         page_portfolio_uebersicht(df)
