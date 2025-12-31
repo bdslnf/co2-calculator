@@ -1,18 +1,20 @@
 """
-MAIN (Entry-Point) – CO2 Portfolio Calculator - Streamlit Web App
+CO2 Portfolio Calculator – Streamlit Web App
 HSLU Digital Twin Programmieren | Nicola Beeli & Mattia Rohrer
 
-WICHTIGE AENDERUNGEN (wie gewuenscht):
-- Gebaeude-Analyse: Ausgangsdaten LINKS als Textzeilen (inkl. Emissionen), Bild RECHTS klein (fixe Breite).
-- KEIN grosses Bild oben (keine volle Breite).
-- Sidebar: Tags (Multiselect), Radio, Slider, Links -> Gruen (robuste CSS Overrides).
-- Bilder liegen unter: data/images/<gebaeude_id>.(jpg|jpeg|png|webp)
+Fixes (gemäss Screenshot):
+- Schweizer Schreibweise: ä ö ü (kein ae/oe/ue) und kein ß.
+- CHF-Format: 1'000.- (Apostroph + .-) und saubere Synchronisation Textfeld <-> Slider.
+- Sidebar-Farben: Rot/Blau konsequent auf Grün (Slider-Track, Radio, Chips/Tags, Links) via robuste CSS-Overrides.
+- Gebäude-Analyse: Daten links als Textzeilen inkl. Emissionen, Bild klein rechts (fixe Breite), kein Full-Width-Bild oben.
+- Bilder: data/images/<gebaeude_id>.(jpg|jpeg|png|webp)
 - Keine Standort-Karte.
 
-Hinweis:
-Wenn bei dir vorher "keine Aenderung" kam, lag es sehr wahrscheinlich daran, dass Streamlit eine andere Datei gestartet hat.
-Mit diesem File startest du sicher richtig via: streamlit run main.py
+Start:
+    streamlit run main.py
 """
+
+from __future__ import annotations
 
 from pathlib import Path
 import pandas as pd
@@ -42,7 +44,7 @@ IMAGES_DIR = DATA_DIR / "images"
 
 
 # ------------------------------------------------------------
-# Design System (Gruen)
+# Design System (Grün)
 # ------------------------------------------------------------
 GREEN_DARK = "#1B5E20"
 GREEN_MAIN = "#2E7D32"
@@ -85,19 +87,14 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------
-# CSS: Rot/Blau -> Gruen (robust)
+# CSS: Sidebar Rot/Blau -> Grün (robust)
+#   - Slider Track ist oft hardcodiert (rgb(255, 75, 75) = Streamlit-Rot)
+#   - Wir überschreiben gezielt inline-Farben per style-contains Selektoren
 # ------------------------------------------------------------
 st.markdown(
     f"""
 <style>
-/* ----- Force Streamlit theme vars (hilft gegen Blau/Rot Defaults) ----- */
-:root {{
-  --primary-color: {GREEN_MAIN};
-  --secondary-background-color: {GRAY_100};
-  --text-color: {GRAY_900};
-}}
-
-/* ----- Base Layout ----- */
+/* Base */
 html, body, [data-testid="stAppViewContainer"] {{
   background: {WHITE} !important;
   color: {GRAY_900} !important;
@@ -106,7 +103,7 @@ section[data-testid="stSidebar"] {{
   background: {GRAY_100} !important;
 }}
 
-/* ----- Headings ----- */
+/* Header */
 .main-header {{
   font-size: 2.6rem;
   font-weight: 900;
@@ -122,33 +119,36 @@ section[data-testid="stSidebar"] {{
   font-weight: 700;
 }}
 
-/* ----- Links (Blau -> Gruen) ----- */
-a, a:visited {{
-  color: {GREEN_MAIN} !important;
-}}
-a:hover {{
-  color: {GREEN_DARK} !important;
-}}
+/* Links */
+a, a:visited {{ color: {GREEN_MAIN} !important; }}
+a:hover {{ color: {GREEN_DARK} !important; }}
 
-/* ==========================================================
-   SIDEBAR CONTROLS (Multiselect Tags / Radio / Slider)
-   ========================================================== */
-
-/* Radio circle (rot -> gruen) */
-section[data-testid="stSidebar"] input[type="radio"] {{
+/* RADIO: Rot -> Grün (BaseWeb) */
+section[data-testid="stSidebar"] [data-baseweb="radio"] input {{
   accent-color: {GREEN_MAIN} !important;
 }}
-
-/* Slider thumb/track (rot -> gruen) */
-section[data-testid="stSidebar"] div[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {{
-  background: {GREEN_MAIN} !important;
-}}
-/* Slider value text (nicht rot) */
-section[data-testid="stSidebar"] div[data-testid="stSlider"] * {{
-  color: {GRAY_900} !important;
+/* Manche Versionen: SVG Kreis */
+section[data-testid="stSidebar"] [data-baseweb="radio"] svg {{
+  color: {GREEN_MAIN} !important;
+  fill: {GREEN_MAIN} !important;
 }}
 
-/* Select focus border */
+/* MULTISELECT CHIPS: Rot -> Grün */
+section[data-testid="stSidebar"] [data-baseweb="tag"] {{
+  background-color: {GREEN_MED} !important;
+  color: {WHITE} !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  font-weight: 800 !important;
+}}
+section[data-testid="stSidebar"] [data-baseweb="tag"] * {{
+  color: {WHITE} !important;
+}}
+section[data-testid="stSidebar"] [data-baseweb="tag"] svg {{
+  fill: {WHITE} !important;
+}}
+
+/* SELECT: Fokus */
 section[data-testid="stSidebar"] div[data-baseweb="select"] > div {{
   border-color: rgba(46,125,50,0.55) !important;
 }}
@@ -157,33 +157,26 @@ section[data-testid="stSidebar"] div[data-baseweb="select"] > div:focus-within {
   box-shadow: 0 0 0 2px rgba(46,125,50,0.25) !important;
 }}
 
-/* Multiselect tags (rot -> gruen) - BaseWeb Tag */
-section[data-testid="stSidebar"] div[data-baseweb="tag"] {{
-  background-color: {GREEN_MED} !important;
-  color: {WHITE} !important;
-  border: 0 !important;
-  border-radius: 10px !important;
-  font-weight: 800 !important;
-}}
-section[data-testid="stSidebar"] div[data-baseweb="tag"] * {{
-  color: {WHITE} !important;
-}}
-section[data-testid="stSidebar"] div[data-baseweb="tag"] svg {{
-  fill: {WHITE} !important;
+/* SLIDER: Thumb */
+section[data-testid="stSidebar"] [data-baseweb="slider"] div[role="slider"] {{
+  background: {GREEN_MAIN} !important;
+  border-color: {GREEN_MAIN} !important;
 }}
 
-/* Alternative tag rendering in some versions */
-section[data-testid="stSidebar"] div[data-testid="stMultiSelect"] span[role="button"],
-section[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[role="button"] {{
-  background-color: {GREEN_MED} !important;
-  color: {WHITE} !important;
-  border: 0 !important;
-  border-radius: 10px !important;
-  font-weight: 800 !important;
+/* SLIDER: Track (überschreibt Streamlit-Rot rgb(255, 75, 75) und Blau) */
+section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="rgb(255, 75, 75)"] {{
+  background-color: {GREEN_MAIN} !important;
 }}
-section[data-testid="stSidebar"] div[data-testid="stMultiSelect"] span[role="button"] *,
-section[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[role="button"] * {{
-  color: {WHITE} !important;
+section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="rgb(0, 104, 201)"] {{
+  background-color: {GREEN_MAIN} !important;
+}}
+/* Generischer: falls inline background gesetzt ist */
+section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="background"] {{
+  /* NICHT alles grün faerben, nur wenn es wirklich ein Track ist */
+}}
+/* Slider Labels nicht rot */
+section[data-testid="stSidebar"] div[data-testid="stSlider"] * {{
+  color: {GRAY_900} !important;
 }}
 
 /* Fokus ruhig */
@@ -204,26 +197,49 @@ section[data-testid="stSidebar"] div[data-testid="stMultiSelect"] div[role="butt
 
 
 # ------------------------------------------------------------
-# Utilities
+# Formatierung (CH)
 # ------------------------------------------------------------
-def format_number_swiss(value) -> str:
+def format_number_ch(value) -> str:
+    """1000 -> 1'000"""
     try:
-        value = float(value)
+        x = float(value)
     except Exception:
         return "0"
-    return f"{int(round(value)): ,}".replace(",", "").replace(" ", "'")
+    return f"{int(round(x)):,}".replace(",", "'")
 
 
-def parse_swiss_number(text: str) -> int:
+def format_chf(value) -> str:
+    """1000 -> 1'000.-"""
+    return f"{format_number_ch(value)}.-"
+
+
+def parse_chf_input(text: str) -> int:
+    """
+    Akzeptiert:
+    1000
+    1'000
+    1'000.-
+    CHF 1'000.-
+    '2000000 (falls User vorn ein Apostroph tippt)
+    """
     if not text:
         return 0
-    cleaned = str(text).replace("'", "").replace(" ", "").replace(",", "")
+    s = str(text).strip()
+    s = s.replace("CHF", "").replace("chf", "")
+    s = s.replace(".-", "")
+    s = s.replace("’", "'")
+    s = s.replace(" ", "").replace(",", "")
+    # Apostrophe (auch ein führendes) entfernen
+    s = s.replace("'", "")
     try:
-        return int(cleaned)
+        return int(float(s))
     except Exception:
         return 0
 
 
+# ------------------------------------------------------------
+# Daten
+# ------------------------------------------------------------
 def lade_daten() -> pd.DataFrame:
     if not CSV_INPUT.exists():
         st.error(f"CSV-Datei nicht gefunden: {CSV_INPUT}")
@@ -245,6 +261,9 @@ def lade_daten() -> pd.DataFrame:
     return df
 
 
+# ------------------------------------------------------------
+# Bilder
+# ------------------------------------------------------------
 def finde_gebaeude_bildpfad(gebaeude_id: str) -> Path | None:
     if not IMAGES_DIR.exists():
         return None
@@ -258,10 +277,7 @@ def finde_gebaeude_bildpfad(gebaeude_id: str) -> Path | None:
     return None
 
 
-def zeige_bild_klein_rechts(gebaeude_id: str, width: int = 300, height: int = 200):
-    """
-    Zeigt Bild klein rechts (fixe Breite), nicht als volle Spaltenbreite.
-    """
+def zeige_bild_klein_rechts(gebaeude_id: str, width: int = 320, height: int = 220):
     p = finde_gebaeude_bildpfad(gebaeude_id)
     st.markdown('<div class="img-right">', unsafe_allow_html=True)
     if p:
@@ -289,23 +305,55 @@ def zeige_bild_klein_rechts(gebaeude_id: str, width: int = 300, height: int = 20
 
 
 # ------------------------------------------------------------
+# Sidebar: Max. Investition – saubere Synchronisation
+# ------------------------------------------------------------
+MAX_INV_MIN = 0
+MAX_INV_MAX = 2_000_000
+MAX_INV_STEP = 10_000
+
+
+def _ensure_state():
+    if "max_inv" not in st.session_state:
+        st.session_state.max_inv = 100_000
+    if "max_inv_text" not in st.session_state:
+        st.session_state.max_inv_text = format_chf(st.session_state.max_inv)
+    if "max_inv_slider" not in st.session_state:
+        st.session_state.max_inv_slider = int(st.session_state.max_inv)
+
+
+def on_change_max_inv_text():
+    v = parse_chf_input(st.session_state.max_inv_text)
+    v = max(MAX_INV_MIN, min(MAX_INV_MAX, v))
+    st.session_state.max_inv = v
+    st.session_state.max_inv_slider = v
+    # Re-formatieren, damit nie "'2000000" stehen bleibt
+    st.session_state.max_inv_text = format_chf(v)
+
+
+def on_change_max_inv_slider():
+    v = int(st.session_state.max_inv_slider)
+    v = max(MAX_INV_MIN, min(MAX_INV_MAX, v))
+    st.session_state.max_inv = v
+    st.session_state.max_inv_text = format_chf(v)
+
+
+# ------------------------------------------------------------
 # Pages
 # ------------------------------------------------------------
 def page_portfolio_uebersicht(df: pd.DataFrame):
-    st.header("▦ Portfolio-Uebersicht")
+    st.header("▦ Portfolio-Übersicht")
 
     aktuelles_jahr = int(df["jahr"].max())
     df_aktuell = berechne_emissionen(df[df["jahr"] == aktuelles_jahr].copy())
-
     stats = analysiere_portfolio(df_aktuell, KBOB_FAKTOREN)
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.metric("Gebaeude", f"{stats['anzahl_gebaeude']}")
+        st.metric("Gebäude", f"{stats['anzahl_gebaeude']}")
     with c2:
         st.metric("Gesamt-Emissionen", f"{stats['gesamt_emissionen_t_jahr']:.1f} t CO₂e/Jahr")
     with c3:
-        st.metric("Ø pro Gebaeude", f"{stats['durchschnitt_emissionen_t_jahr']:.1f} t/Jahr")
+        st.metric("Ø pro Gebäude", f"{stats['durchschnitt_emissionen_t_jahr']:.1f} t/Jahr")
     with c4:
         if stats.get("durchschnitt_emissionen_kg_m2") is not None:
             st.metric("Ø pro m²", f"{stats['durchschnitt_emissionen_kg_m2']:.1f} kg/m²")
@@ -327,7 +375,7 @@ def page_portfolio_uebersicht(df: pd.DataFrame):
     fig.update_layout(margin=dict(t=60, b=20, l=20, r=20), legend_title_text="Heizung")
     st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("Gebaeude (Bilder)")
+    st.subheader("Gebäude (Bilder)")
     cards_df = df_aktuell.sort_values("emissionen_gesamt_t", ascending=False).reset_index(drop=True)
 
     cols_per_row = 3
@@ -375,12 +423,12 @@ def page_portfolio_uebersicht(df: pd.DataFrame):
 def page_gebaeude_analyse(df: pd.DataFrame):
     df_aktuell = berechne_emissionen(df[df["jahr"] == df["jahr"].max()].copy())
 
-    gebaeude_id = st.sidebar.selectbox("Gebaeude auswaehlen", list(df_aktuell["gebaeude_id"].unique()))
+    gebaeude_id = st.sidebar.selectbox("Gebäude auswählen", list(df_aktuell["gebaeude_id"].unique()))
     gebaeude = df_aktuell[df_aktuell["gebaeude_id"] == gebaeude_id].iloc[0]
 
     st.header(f"⌂ {gebaeude_id}")
 
-    # ---- GENAU WIE GEWUENSCHT: Daten links, Bild klein rechts ----
+    # Daten links, Bild klein rechts (wie im Screenshot gewünscht)
     col_data, col_img = st.columns([4, 2], vertical_alignment="top")
 
     with col_data:
@@ -391,16 +439,15 @@ def page_gebaeude_analyse(df: pd.DataFrame):
             except Exception:
                 pass
 
-        st.write(f"**Verbrauch:** {format_number_swiss(gebaeude.get('jahresverbrauch_kwh', 0))} kWh/Jahr")
+        st.write(f"**Verbrauch:** {format_number_ch(gebaeude.get('jahresverbrauch_kwh', 0))} kWh/Jahr")
 
         if "flaeche_m2" in gebaeude and pd.notna(gebaeude["flaeche_m2"]):
-            st.write(f"**Flaeche:** {format_number_swiss(gebaeude.get('flaeche_m2', 0))} m²")
+            st.write(f"**Fläche:** {format_number_ch(gebaeude.get('flaeche_m2', 0))} m²")
 
-        # Emissionen gleich wie der Rest (KEIN st.metric!)
         st.write(f"**Emissionen:** {gebaeude.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
 
     with col_img:
-        zeige_bild_klein_rechts(gebaeude_id, width=320, height=220)
+        zeige_bild_klein_rechts(gebaeude_id, width=340, height=220)
 
     st.markdown("---")
 
@@ -411,7 +458,7 @@ def page_gebaeude_analyse(df: pd.DataFrame):
         if isinstance(standards_df, pd.DataFrame) and not standards_df.empty:
             st.dataframe(standards_df, use_container_width=True)
 
-    # Sanierungen
+    # Sanierungsszenarien
     st.header("✦ Sanierungsszenarien")
 
     szenarien = erstelle_alle_szenarien(gebaeude, KBOB_FAKTOREN)
@@ -421,7 +468,7 @@ def page_gebaeude_analyse(df: pd.DataFrame):
     szen_wirtschaft = [wirtschaftlichkeitsanalyse(san, gebaeude) for san in alle]
     szen_df = priorisiere_sanierungen(szen_wirtschaft, kriterium="score")
 
-    # Sidebar Filter
+    # Filter
     st.sidebar.subheader("Filter")
     if "kategorie" in szen_df.columns:
         kategorie_filter = st.sidebar.multiselect(
@@ -432,29 +479,30 @@ def page_gebaeude_analyse(df: pd.DataFrame):
     else:
         kategorie_filter = []
 
+    # Max. Investition (Text <-> Slider synchron)
     st.sidebar.markdown("### Max. Investition")
-    if "max_investition_wert" not in st.session_state:
-        st.session_state.max_investition_wert = 100000
+    _ensure_state()
 
-    txt = st.sidebar.text_input("Betrag eingeben [CHF]:", value=format_number_swiss(st.session_state.max_investition_wert))
-    parsed = parse_swiss_number(txt)
-    if parsed != st.session_state.max_investition_wert:
-        st.session_state.max_investition_wert = min(max(0, parsed), 2000000)
-        st.rerun()
-
-    slider = st.sidebar.slider(
-        "Oder per Slider:",
-        min_value=0,
-        max_value=2000000,
-        value=st.session_state.max_investition_wert,
-        step=10000,
+    st.sidebar.text_input(
+        "Betrag eingeben [CHF]:",
+        key="max_inv_text",
+        on_change=on_change_max_inv_text,
+        help="Beispiele: 1000, 1'000, 1'000.-, CHF 1'000.-",
     )
-    if slider != st.session_state.max_investition_wert:
-        st.session_state.max_investition_wert = slider
-        st.rerun()
 
-    max_inv = st.session_state.max_investition_wert
-    st.sidebar.success(f"**Gewaehlt: CHF {format_number_swiss(max_inv)}**")
+    st.sidebar.slider(
+        "Oder per Slider:",
+        min_value=MAX_INV_MIN,
+        max_value=MAX_INV_MAX,
+        value=int(st.session_state.max_inv_slider),
+        step=MAX_INV_STEP,
+        key="max_inv_slider",
+        on_change=on_change_max_inv_slider,
+    )
+
+    max_inv = int(st.session_state.max_inv)
+    st.sidebar.success(f"**Gewählt: CHF {format_chf(max_inv)}**")
+    st.sidebar.caption(f"Bereich: 0 - {format_chf(MAX_INV_MAX)}")
 
     # Filter anwenden
     szen_f = szen_df.copy()
@@ -469,14 +517,14 @@ def page_gebaeude_analyse(df: pd.DataFrame):
         with st.expander(title, expanded=(i == 0)):
             cc1, cc2, cc3 = st.columns(3)
             with cc1:
-                st.write(f"**Investition (netto):** CHF {format_number_swiss(row.get('investition_netto_chf', 0))}")
-                st.write(f"**Foerderung:** CHF {format_number_swiss(row.get('foerderung_chf', 0))}")
+                st.write(f"**Investition (netto):** CHF {format_chf(row.get('investition_netto_chf', 0))}")
+                st.write(f"**Förderung:** CHF {format_chf(row.get('foerderung_chf', 0))}")
             with cc2:
                 st.write(f"**CO₂-Reduktion:** {row.get('co2_einsparung_kg_jahr', 0) / 1000:.1f} t/Jahr")
                 st.write(f"**Amortisation:** {row.get('amortisation_jahre', 0):.1f} Jahre")
             with cc3:
                 st.write(f"**ROI:** {row.get('roi_prozent', 0):.1f}%")
-                st.write(f"**NPV:** CHF {format_number_swiss(row.get('npv_chf', 0))}")
+                st.write(f"**NPV:** CHF {format_chf(row.get('npv_chf', 0))}")
 
     st.subheader("Alle Szenarien im Vergleich")
     show_cols = [
@@ -493,6 +541,7 @@ def page_gebaeude_analyse(df: pd.DataFrame):
     show_cols = [c for c in show_cols if c in szen_f.columns]
     st.dataframe(szen_f[show_cols], use_container_width=True)
 
+    # Kosten-Nutzen
     if (
         "investition_netto_chf" in szen_f.columns
         and "co2_einsparung_kg_jahr" in szen_f.columns
@@ -510,23 +559,26 @@ def page_gebaeude_analyse(df: pd.DataFrame):
             color_discrete_map=cat_map,
             hover_data=["name", "amortisation_jahre", "roi_prozent"] if "name" in szen_f.columns else None,
             template=PLOTLY_TEMPLATE,
-            title="Investition vs. CO₂-Reduktion (Groesse = Prioritaet)",
+            title="Investition vs. CO₂-Reduktion (Grösse = Priorität)",
         )
         fig.update_traces(marker=dict(opacity=0.85))
         st.plotly_chart(fig, use_container_width=True)
 
+    # Sensitivität
     if len(szen_f) > 0:
-        with st.expander("Sensitivitaetsanalyse (Top-Empfehlung)"):
+        with st.expander("Sensitivitätsanalyse (Top-Empfehlung)"):
             top = szen_f.iloc[0].to_dict()
+
             parameter = st.selectbox(
                 "Szenario",
                 ["energiepreis", "co2_abgabe", "foerderung"],
                 format_func=lambda x: {
                     "energiepreis": "Energiepreis-Entwicklung",
                     "co2_abgabe": "CO₂-Abgabe",
-                    "foerderung": "Foerdergelder",
+                    "foerderung": "Fördergelder",
                 }[x],
             )
+
             sens_df = sensitivitaetsanalyse(top, gebaeude, parameter)
 
             fig2 = go.Figure()
@@ -554,7 +606,7 @@ def page_gebaeude_analyse(df: pd.DataFrame):
                 )
 
             fig2.update_layout(
-                title=f"Sensitivitaet: {parameter}",
+                title=f"Sensitivität: {parameter}",
                 xaxis_title="Multiplikator (1.0 = Basis)",
                 yaxis_title="Amortisation [Jahre]",
                 yaxis2=dict(title="NPV [CHF]", overlaying="y", side="right"),
@@ -566,16 +618,16 @@ def page_gebaeude_analyse(df: pd.DataFrame):
 
 
 def page_vergleich(df: pd.DataFrame):
-    st.header("≡ Gebaeude-Vergleich")
+    st.header("≡ Gebäude-Vergleich")
     df_aktuell = berechne_emissionen(df[df["jahr"] == df["jahr"].max()].copy())
 
     ausgewaehlt = st.multiselect(
-        "Gebaeude auswaehlen (max. 5)",
+        "Gebäude auswählen (max. 5)",
         list(df_aktuell["gebaeude_id"].unique()),
         default=list(df_aktuell["gebaeude_id"].unique())[:3],
     )
     if not ausgewaehlt:
-        st.info("Bitte mindestens ein Gebaeude auswaehlen.")
+        st.info("Bitte mindestens ein Gebäude auswählen.")
         return
 
     vdf = df_aktuell[df_aktuell["gebaeude_id"].isin(ausgewaehlt)].copy()
@@ -587,6 +639,7 @@ def page_vergleich(df: pd.DataFrame):
 
     st.subheader("CO₂-Emissionen im Vergleich")
     heiz_map = {t: COLOR_MAP_HEIZUNG.get(t, GREEN_MAIN) for t in vdf["heizung_typ"].unique()}
+
     fig = px.bar(
         vdf,
         x="gebaeude_id",
@@ -594,7 +647,7 @@ def page_vergleich(df: pd.DataFrame):
         color="heizung_typ",
         color_discrete_map=heiz_map,
         template=PLOTLY_TEMPLATE,
-        title="CO₂-Emissionen pro Gebaeude",
+        title="CO₂-Emissionen pro Gebäude",
     )
     fig.update_layout(legend_title_text="Heizung")
     st.plotly_chart(fig, use_container_width=True)
@@ -604,9 +657,6 @@ def page_vergleich(df: pd.DataFrame):
 # Main
 # ------------------------------------------------------------
 def main():
-    # Debug label, damit du sofort siehst, dass diese Datei laeuft
-    st.sidebar.caption("APP VERSION: MAIN-REPLACE-OK")
-
     st.markdown('<div class="main-header">☘︎ CO₂ Portfolio Calculator</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="sub-header">HSLU Digital Twin Programmieren | Nicola Beeli & Mattia Rohrer</div>',
@@ -614,13 +664,13 @@ def main():
     )
 
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Seite auswaehlen", ["Portfolio-Uebersicht", "Gebaeude-Analyse", "Vergleich"])
+    page = st.sidebar.radio("Seite auswählen", ["Portfolio-Übersicht", "Gebäude-Analyse", "Vergleich"])
 
     df = lade_daten()
 
-    if page == "Portfolio-Uebersicht":
+    if page == "Portfolio-Übersicht":
         page_portfolio_uebersicht(df)
-    elif page == "Gebaeude-Analyse":
+    elif page == "Gebäude-Analyse":
         page_gebaeude_analyse(df)
     else:
         page_vergleich(df)
