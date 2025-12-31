@@ -13,11 +13,17 @@ from benchmarks import vergleiche_mit_standards
 from portfolio import analysiere_portfolio
 
 
+# -----------------------------
+# Pfade
+# -----------------------------
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 CSV_INPUT = DATA_DIR / "beispiel_emissionen_mit_jahr.csv"
 IMAGES_DIR = DATA_DIR / "images"
 
+# -----------------------------
+# Farben (nur Gruentöne)
+# -----------------------------
 GREEN_MAIN = "#2E7D32"
 GREEN_MED = "#66BB6A"
 GREEN_DARK = "#1B5E20"
@@ -31,6 +37,7 @@ GRAY_100 = "#ECEFF1"
 
 PLOTLY_TEMPLATE = "simple_white"
 
+# Heizungstypen -> Gruentöne (keine Plotly-Defaultfarben)
 COLOR_MAP_HEIZUNG = {
     "Gas": GREEN_DARK,
     "Fernwärme": GREEN_MAIN,
@@ -40,8 +47,11 @@ COLOR_MAP_HEIZUNG = {
     "Solar": GREEN_LIGHT,
 }
 
-st.set_page_config(page_title="CO2 Portfolio Calculator", page_icon="☘︎", layout="wide")
+st.set_page_config(page_title="CO₂ Portfolio Calculator", page_icon="☘︎", layout="wide")
 
+# -----------------------------
+# CSS (Sidebar: Radio, Chips, Slider, Alerts)
+# -----------------------------
 st.markdown(
     f"""
 <style>
@@ -97,7 +107,7 @@ section[data-testid="stSidebar"] [data-baseweb="slider"] div[role="slider"] {{
   border-color: {GREEN_MAIN} !important;
 }}
 
-/* Slider Track (Streamlit rot/blau) -> gruen (sehr breit) */
+/* Slider Track (Streamlit rot/blau) -> gruen (breit gefasst) */
 section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="255, 75, 75"],
 section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="rgb(255, 75, 75)"],
 section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="#ff4b4b"],
@@ -113,6 +123,16 @@ section[data-testid="stSidebar"] div[data-testid="stSlider"] * {{
   color: {GRAY_900} !important;
 }}
 
+/* Sidebar Info/Warning/Error Box (Viereck) -> gruen */
+section[data-testid="stSidebar"] [data-testid="stAlert"] {{
+  background: #E8F5E9 !important;
+  border: 1px solid {GREEN_LIGHT} !important;
+  color: {GREEN_DARK} !important;
+}}
+section[data-testid="stSidebar"] [data-testid="stAlert"] * {{
+  color: {GREEN_DARK} !important;
+}}
+
 /* Bild rechts */
 .img-right img {{
   border-radius: 14px;
@@ -124,6 +144,9 @@ section[data-testid="stSidebar"] div[data-testid="stSlider"] * {{
 )
 
 
+# -----------------------------
+# Format-Helfer (Schweiz)
+# -----------------------------
 def format_number_ch(x) -> str:
     try:
         x = float(x)
@@ -147,10 +170,26 @@ def parse_chf(s: str) -> int:
         return 0
 
 
+def fmt_float(x, d=2) -> str:
+    if pd.isna(x):
+        return "-"
+    return f"{float(x):.{d}f}"
+
+
+def fmt_pct(x, d=1) -> str:
+    if pd.isna(x):
+        return "-"
+    return f"{float(x):.{d}f}%"
+
+
+# -----------------------------
+# Daten / Bilder
+# -----------------------------
 def load_data() -> pd.DataFrame:
     df = pd.read_csv(CSV_INPUT, encoding="utf-8")
     msgs = validiere_eingabedaten(df)
     for m in msgs:
+        # kurz halten: Warnungen/Errors im Sidebar
         if "Warnung" in m:
             st.sidebar.warning(m)
         else:
@@ -158,14 +197,41 @@ def load_data() -> pd.DataFrame:
     return df
 
 
+def _simplify_key(s: str) -> str:
+    s = str(s).lower().strip()
+    # nur buchstaben+zahlen behalten (unterstrich/leerzeichen egal)
+    return "".join(ch for ch in s if ch.isalnum())
+
+
 def find_image_path(gebaeude_id: str) -> Path | None:
     gid = str(gebaeude_id).strip()
-    for base in (gid, gid.replace(" ", "_")):
-        for ext in ("jpg", "jpeg", "png", "webp"):
-            p = IMAGES_DIR / f"{base}.{ext}"
-            if p.exists():
-                return p
-    return None
+    if not IMAGES_DIR.exists():
+        return None
+
+    files = list(IMAGES_DIR.glob("*.*"))
+    gid_key = _simplify_key(gid)
+
+    # 1) exakt (nach vereinfachtem key)
+    for p in files:
+        if p.suffix.lower() not in [".jpg", ".jpeg", ".png", ".webp"]:
+            continue
+        if _simplify_key(p.stem) == gid_key:
+            return p
+
+    # 2) enthaelt-match (Bahnhofstr vs Bahnhofstrasse usw.)
+    best = None
+    best_len = 0
+    for p in files:
+        if p.suffix.lower() not in [".jpg", ".jpeg", ".png", ".webp"]:
+            continue
+        stem_key = _simplify_key(p.stem)
+        if stem_key in gid_key or gid_key in stem_key:
+            l = min(len(stem_key), len(gid_key))
+            if l > best_len:
+                best = p
+                best_len = l
+
+    return best
 
 
 def small_image_right(gebaeude_id: str, width: int = 340, height: int = 220):
@@ -190,6 +256,9 @@ def small_image_right(gebaeude_id: str, width: int = 340, height: int = 220):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
+# -----------------------------
+# Seiten
+# -----------------------------
 def page_portfolio(df: pd.DataFrame):
     st.header("▦ Portfolio-Übersicht")
 
@@ -222,6 +291,7 @@ def page_portfolio(df: pd.DataFrame):
         fig.update_traces(textposition="inside", textinfo="percent+label")
         st.plotly_chart(fig, use_container_width=True)
 
+    # Wichtig: Übersicht mit Bildern (Cards)
     st.subheader("Gebäude (Bilder)")
     cards_df = df_now.sort_values("emissionen_gesamt_t", ascending=False).reset_index(drop=True)
 
@@ -257,7 +327,7 @@ def page_portfolio(df: pd.DataFrame):
                         )
                     st.markdown(f"### {gid}")
                     st.write(f"**Heizung:** {r.get('heizung_typ', '-')}")
-                    st.write(f"**Emissionen:** {r.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
+                    st.write(f"**Emissionen:** {float(r.get('emissionen_gesamt_t', 0)):.1f} t CO₂e/Jahr")
             idx += 1
 
 
@@ -281,13 +351,14 @@ def page_gebaeude(df: pd.DataFrame):
         st.write(f"**Verbrauch:** {format_number_ch(g.get('jahresverbrauch_kwh', 0))} kWh/Jahr")
         if "flaeche_m2" in g and pd.notna(g["flaeche_m2"]):
             st.write(f"**Fläche:** {format_number_ch(g.get('flaeche_m2', 0))} m²")
-        st.write(f"**Emissionen:** {g.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
+        st.write(f"**Emissionen:** {float(g.get('emissionen_gesamt_t', 0)):.1f} t CO₂e/Jahr")
 
     with right:
         small_image_right(gebaeude_id, width=340, height=220)
 
     st.markdown("---")
 
+    # Benchmark
     if "flaeche_m2" in g and pd.notna(g["flaeche_m2"]) and g["flaeche_m2"] > 0:
         st.subheader("|—| Benchmark-Vergleich")
         bdf = vergleiche_mit_standards(g, g.get("emissionen_gesamt_kg", 0))
@@ -302,16 +373,20 @@ def page_gebaeude(df: pd.DataFrame):
 
     st.sidebar.subheader("Filter")
     kategorie_filter = (
-        st.sidebar.multiselect("Kategorie", list(szen_df["kategorie"].unique()), list(szen_df["kategorie"].unique()))
+        st.sidebar.multiselect(
+            "Kategorie",
+            list(szen_df["kategorie"].unique()),
+            list(szen_df["kategorie"].unique()),
+        )
         if "kategorie" in szen_df.columns
         else []
     )
 
+    # Max. Investition (Text + Slider zusammen)
     if "max_inv" not in st.session_state:
         st.session_state.max_inv = 100_000
 
     st.sidebar.markdown("### Max. Investition")
-
     txt = st.sidebar.text_input("Betrag eingeben [CHF]:", value=format_chf(st.session_state.max_inv))
     val = parse_chf(txt)
     val = max(0, min(2_000_000, val))
@@ -324,13 +399,16 @@ def page_gebaeude(df: pd.DataFrame):
 
     max_inv = st.session_state.max_inv
     st.sidebar.success(f"**Gewählt: CHF {format_chf(max_inv)}**")
+    st.sidebar.caption("Bereich: 0 - 2'000'000 CHF")
 
+    # Filter anwenden
     f = szen_df.copy()
     if kategorie_filter and "kategorie" in f.columns:
         f = f[f["kategorie"].isin(kategorie_filter)]
     if "investition_netto_chf" in f.columns:
         f = f[f["investition_netto_chf"] <= max_inv]
 
+    # Top Empfehlungen
     st.subheader("Top-3 Empfehlungen")
     for i, row in f.head(3).iterrows():
         title = f"#{int(row.get('rang', i + 1))}: {row.get('name', 'Massnahme')}"
@@ -338,11 +416,12 @@ def page_gebaeude(df: pd.DataFrame):
             c1, c2, c3 = st.columns(3)
             c1.write(f"**Investition (netto):** CHF {format_chf(row.get('investition_netto_chf', 0))}")
             c1.write(f"**Förderung:** CHF {format_chf(row.get('foerderung_chf', 0))}")
-            c2.write(f"**CO₂-Reduktion:** {row.get('co2_einsparung_kg_jahr', 0) / 1000:.1f} t/Jahr")
-            c2.write(f"**Amortisation:** {row.get('amortisation_jahre', 0):.1f} Jahre")
-            c3.write(f"**ROI:** {row.get('roi_prozent', 0):.1f}%")
+            c2.write(f"**CO₂-Reduktion:** {float(row.get('co2_einsparung_kg_jahr', 0)) / 1000:.1f} t/Jahr")
+            c2.write(f"**Amortisation:** {fmt_float(row.get('amortisation_jahre', 0), 2)} Jahre")
+            c3.write(f"**ROI:** {fmt_float(row.get('roi_prozent', 0), 1)}%")
             c3.write(f"**NPV:** CHF {format_chf(row.get('npv_chf', 0))}")
 
+    # Alle Szenarien
     st.subheader("Alle Szenarien")
     show_cols = [
         c
@@ -357,25 +436,66 @@ def page_gebaeude(df: pd.DataFrame):
         ]
         if c in f.columns
     ]
-    st.dataframe(f[show_cols], use_container_width=True)
+    show_df = f[show_cols].copy()
+    if "investition_netto_chf" in show_df.columns:
+        show_df["investition_netto_chf"] = show_df["investition_netto_chf"].apply(lambda v: f"CHF {format_chf(v)}")
+    if "npv_chf" in show_df.columns:
+        show_df["npv_chf"] = show_df["npv_chf"].apply(lambda v: f"CHF {format_chf(v)}")
+    if "amortisation_jahre" in show_df.columns:
+        show_df["amortisation_jahre"] = show_df["amortisation_jahre"].apply(lambda v: fmt_float(v, 2))
+    if "roi_prozent" in show_df.columns:
+        show_df["roi_prozent"] = show_df["roi_prozent"].apply(lambda v: fmt_float(v, 1))
+    st.dataframe(show_df, use_container_width=True)
 
+    # Sensitivität
     if len(f) > 0:
         with st.expander("Sensitivitätsanalyse (Top-Empfehlung)"):
             top = f.iloc[0].to_dict()
             parameter = st.selectbox(
                 "Szenario",
                 ["energiepreis", "co2_abgabe", "foerderung"],
-                format_func=lambda x: {"energiepreis": "Energiepreis", "co2_abgabe": "CO₂-Abgabe", "foerderung": "Förderung"}[
-                    x
-                ],
+                format_func=lambda x: {
+                    "energiepreis": "Energiepreis",
+                    "co2_abgabe": "CO₂-Abgabe",
+                    "foerderung": "Förderung",
+                }[x],
             )
             sens_df = sensitivitaetsanalyse(top, g, parameter)
+
+            # Plot: immer gruen
             fig2 = go.Figure()
             fig2.add_trace(
-                go.Scatter(x=sens_df["faktor"], y=sens_df["amortisation_jahre"], mode="lines+markers", name="Amortisation")
+                go.Scatter(
+                    x=sens_df["faktor"],
+                    y=sens_df["amortisation_jahre"],
+                    mode="lines+markers",
+                    name="Amortisation",
+                    line=dict(color=GREEN_MAIN, width=3),
+                    marker=dict(color=GREEN_MAIN, size=8),
+                )
+            )
+            fig2.update_layout(
+                template=PLOTLY_TEMPLATE,
+                xaxis_title="Faktor",
+                yaxis_title="Amortisation (Jahre)",
             )
             st.plotly_chart(fig2, use_container_width=True)
-            st.dataframe(sens_df, use_container_width=True)
+
+            # Tabelle: Dezimalen/CHF einheitlich
+            sens_show = sens_df.copy()
+            if "faktor" in sens_show.columns:
+                sens_show["faktor"] = sens_show["faktor"].apply(lambda v: fmt_float(v, 1))
+            if "amortisation_jahre" in sens_show.columns:
+                sens_show["amortisation_jahre"] = sens_show["amortisation_jahre"].apply(lambda v: fmt_float(v, 2))
+            if "roi_prozent" in sens_show.columns:
+                sens_show["roi_prozent"] = sens_show["roi_prozent"].apply(lambda v: fmt_float(v, 1))
+            if "npv_chf" in sens_show.columns:
+                sens_show["npv_chf"] = sens_show["npv_chf"].apply(lambda v: f"CHF {format_chf(v)}" if pd.notna(v) else "-")
+            if "jaehrliche_einsparung_chf" in sens_show.columns:
+                sens_show["jaehrliche_einsparung_chf"] = sens_show["jaehrliche_einsparung_chf"].apply(
+                    lambda v: f"CHF {format_chf(v)}" if pd.notna(v) else "-"
+                )
+            st.dataframe(sens_show, use_container_width=True)
 
 
 def page_vergleich(df: pd.DataFrame):
@@ -385,11 +505,7 @@ def page_vergleich(df: pd.DataFrame):
 
     # Auswahl (max. 5)
     all_ids = list(df_now["gebaeude_id"].unique())
-    selected = st.multiselect(
-        "Gebäude auswählen (max. 5)",
-        all_ids,
-        default=all_ids[:3],
-    )
+    selected = st.multiselect("Gebäude auswählen (max. 5)", all_ids, default=all_ids[:3])
     if len(selected) > 5:
         st.warning("Bitte maximal 5 Gebäude auswählen.")
         selected = selected[:5]
@@ -399,7 +515,7 @@ def page_vergleich(df: pd.DataFrame):
 
     vdf = df_now[df_now["gebaeude_id"].isin(selected)].copy()
 
-    # Ableitungen
+    # Ableitungen pro m²
     if "flaeche_m2" in vdf.columns:
         vdf["emissionen_pro_m2"] = vdf.apply(
             lambda r: (r.get("emissionen_gesamt_t", 0) / r["flaeche_m2"])
@@ -417,7 +533,7 @@ def page_vergleich(df: pd.DataFrame):
         vdf["emissionen_pro_m2"] = None
         vdf["verbrauch_pro_m2"] = None
 
-    # Kennzahlenwahl (Balken)
+    # Controls
     c1, c2, c3 = st.columns([2, 2, 2])
     with c1:
         metric = st.selectbox(
@@ -434,31 +550,33 @@ def page_vergleich(df: pd.DataFrame):
     with c3:
         normalize = st.checkbox("Normalisieren (0–1)", value=False)
 
+    # Metric mapping
     if metric == "Emissionen (t CO₂e/Jahr)":
         y_col = "emissionen_gesamt_t"
         y_title = "t CO₂e/Jahr"
-        y_fmt = lambda x: f"{x:.2f}" if pd.notna(x) else "-"
+        y_fmt = lambda x: fmt_float(x, 2)
         better = "min"
     elif metric == "Verbrauch (kWh/Jahr)":
         y_col = "jahresverbrauch_kwh"
         y_title = "kWh/Jahr"
-        y_fmt = lambda x: f"{int(round(x)):,}".replace(",", "'") if pd.notna(x) else "-"
+        y_fmt = lambda x: format_number_ch(x) if pd.notna(x) else "-"
         better = "min"
     elif metric == "Emissionen pro m² (t CO₂e/m²)":
         y_col = "emissionen_pro_m2"
         y_title = "t CO₂e/m²"
-        y_fmt = lambda x: f"{x:.4f}" if pd.notna(x) else "-"
+        y_fmt = lambda x: fmt_float(x, 4)
         better = "min"
     else:
         y_col = "verbrauch_pro_m2"
         y_title = "kWh/m²"
-        y_fmt = lambda x: f"{x:.1f}" if pd.notna(x) else "-"
+        y_fmt = lambda x: fmt_float(x, 1)
         better = "min"
 
     plot_df = vdf[["gebaeude_id", "heizung_typ", y_col]].copy()
     if sort_on != "keine":
         plot_df = plot_df.sort_values(y_col, ascending=(sort_on == "aufsteigend"))
 
+    # Normalisieren (optional)
     if normalize:
         vals = plot_df[y_col].astype(float)
         vmin, vmax = vals.min(), vals.max()
@@ -472,12 +590,12 @@ def page_vergleich(df: pd.DataFrame):
         y_plot_col = y_col
         y_axis_title = y_title
 
-    # Farben (nur Gruen)
-    heiz_order = list(plot_df["heizung_typ"].dropna().unique())
+    # Farben (Heizungstyp -> Gruen)
+    heiz_types = list(plot_df["heizung_typ"].dropna().unique())
     green_palette = [GREEN_DARK, GREEN_MAIN, GREEN_MED, GREEN_LIGHT]
-    heiz_color_map = {h: green_palette[i % len(green_palette)] for i, h in enumerate(heiz_order)}
+    heiz_color_map = {h: green_palette[i % len(green_palette)] for i, h in enumerate(heiz_types)}
 
-    # Tabelle (formatiert)
+    # Tabelle oben (formatiert)
     table_cols = [
         "gebaeude_id",
         "heizung_typ",
@@ -491,19 +609,19 @@ def page_vergleich(df: pd.DataFrame):
     tdf = vdf[table_cols].copy()
 
     if "jahresverbrauch_kwh" in tdf.columns:
-        tdf["jahresverbrauch_kwh"] = tdf["jahresverbrauch_kwh"].apply(lambda x: f"{int(round(x)):,}".replace(",", "'") if pd.notna(x) else "-")
+        tdf["jahresverbrauch_kwh"] = tdf["jahresverbrauch_kwh"].apply(lambda x: format_number_ch(x) if pd.notna(x) else "-")
     if "emissionen_gesamt_t" in tdf.columns:
-        tdf["emissionen_gesamt_t"] = tdf["emissionen_gesamt_t"].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "-")
+        tdf["emissionen_gesamt_t"] = tdf["emissionen_gesamt_t"].apply(lambda x: fmt_float(x, 2))
     if "flaeche_m2" in tdf.columns:
-        tdf["flaeche_m2"] = tdf["flaeche_m2"].apply(lambda x: f"{int(round(x)):,}".replace(",", "'") if pd.notna(x) else "-")
+        tdf["flaeche_m2"] = tdf["flaeche_m2"].apply(lambda x: format_number_ch(x) if pd.notna(x) else "-")
     if "verbrauch_pro_m2" in tdf.columns:
-        tdf["verbrauch_pro_m2"] = tdf["verbrauch_pro_m2"].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "-")
+        tdf["verbrauch_pro_m2"] = tdf["verbrauch_pro_m2"].apply(lambda x: fmt_float(x, 1))
     if "emissionen_pro_m2" in tdf.columns:
-        tdf["emissionen_pro_m2"] = tdf["emissionen_pro_m2"].apply(lambda x: f"{x:.4f}" if pd.notna(x) else "-")
+        tdf["emissionen_pro_m2"] = tdf["emissionen_pro_m2"].apply(lambda x: fmt_float(x, 4))
 
     st.dataframe(tdf, use_container_width=True)
 
-    # Balkenplot
+    # Balkenplot (gruen via map)
     st.subheader("Vergleich")
     fig = px.bar(
         plot_df,
@@ -522,44 +640,30 @@ def page_vergleich(df: pd.DataFrame):
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # ------------------------------------------------------------
-    # Delta zum besten Gebäude (Prozent)
-    # ------------------------------------------------------------
+    # Delta zum besten Gebäude
     st.subheader("Delta zum besten Gebäude")
-
     base_series = vdf[["gebaeude_id", y_col]].dropna().copy()
     if base_series.empty:
         st.info("Für diese Kennzahl fehlen Werte.")
     else:
-        if better == "min":
-            best_val = base_series[y_col].min()
-            best_id = base_series.loc[base_series[y_col].idxmin(), "gebaeude_id"]
-        else:
-            best_val = base_series[y_col].max()
-            best_id = base_series.loc[base_series[y_col].idxmax(), "gebaeude_id"]
+        best_val = base_series[y_col].min() if better == "min" else base_series[y_col].max()
+        best_id = base_series.loc[base_series[y_col].idxmin(), "gebaeude_id"] if better == "min" else base_series.loc[base_series[y_col].idxmax(), "gebaeude_id"]
 
         delta_df = base_series.copy()
-        delta_df["best_gebaeude"] = best_id
-        delta_df["best_wert"] = best_val
-        delta_df["delta_prozent"] = ((delta_df[y_col] - best_val) / best_val) * 100 if best_val != 0 else 0
-
-        # Schön formatieren
         delta_df["wert"] = delta_df[y_col].apply(y_fmt)
-        delta_df["delta_prozent"] = delta_df["delta_prozent"].apply(lambda x: f"{x:+.1f}%" if pd.notna(x) else "-")
+        if best_val != 0:
+            delta_df["delta_prozent"] = ((delta_df[y_col] - best_val) / best_val) * 100
+        else:
+            delta_df["delta_prozent"] = 0.0
+        delta_df["delta_prozent"] = delta_df["delta_prozent"].apply(lambda x: f"{x:+.1f}%")
 
-        # Sort: best oben
         delta_df = delta_df.sort_values(y_col, ascending=(better == "min"))
-
         st.caption(f"Bestes Gebäude: **{best_id}** ({y_fmt(best_val)} {y_title})")
         st.dataframe(delta_df[["gebaeude_id", "wert", "delta_prozent"]], use_container_width=True)
 
-    # ------------------------------------------------------------
-    # Spider / Radar (3–4 Kennzahlen)
-    # ------------------------------------------------------------
+    # Spider / Radar (normalisiert, höher = besser)
     st.subheader("Spider/Radar (normalisiert)")
 
-    # Kennzahlen, die wir im Radar zeigen wollen
-    # Emissionen/Verbrauch pro m² nur wenn Fläche vorhanden
     radar_metrics = [
         ("Emissionen", "emissionen_gesamt_t"),
         ("Verbrauch", "jahresverbrauch_kwh"),
@@ -570,28 +674,24 @@ def page_vergleich(df: pd.DataFrame):
             ("Verbrauch pro m²", "verbrauch_pro_m2"),
         ]
 
-    # Optional: Investition (wenn vorhanden)
     invest_cols = [c for c in ["investition_netto_chf", "investition_chf", "investition"] if c in vdf.columns]
     if invest_cols:
         radar_metrics += [("Investition", invest_cols[0])]
 
-    # Auswahl 3–4 Kennzahlen
     options = [name for name, _ in radar_metrics]
     default_sel = options[:4] if len(options) >= 4 else options
     chosen = st.multiselect("Radar-Kennzahlen (3–4)", options, default=default_sel)
-
     if len(chosen) < 3:
         st.info("Bitte mindestens 3 Kennzahlen für den Radar auswählen.")
         return
-
     chosen = chosen[:4]
+
     chosen_cols = [col for name, col in radar_metrics if name in chosen]
     chosen_names = [name for name, col in radar_metrics if name in chosen]
 
     radar_df = vdf[["gebaeude_id"] + chosen_cols].copy()
 
-    # Normalisieren pro Kennzahl (0–1), kleiner = besser -> invertieren
-    # Für Emissionen/Verbrauch gilt: kleiner ist besser
+    # kleiner = besser -> invertieren
     invert_if = set(["emissionen_gesamt_t", "jahresverbrauch_kwh", "emissionen_pro_m2", "verbrauch_pro_m2"] + invest_cols)
 
     for col in chosen_cols:
@@ -603,9 +703,8 @@ def page_vergleich(df: pd.DataFrame):
             norm = (vals - vmin) / (vmax - vmin)
             radar_df[col] = (1 - norm) if col in invert_if else norm
 
-    # Plotly Radar
     fig_r = go.Figure()
-    for i, gid in enumerate(radar_df["gebaeude_id"].tolist()):
+    for gid in radar_df["gebaeude_id"].tolist():
         r_vals = radar_df.loc[radar_df["gebaeude_id"] == gid, chosen_cols].iloc[0].tolist()
         r_vals = r_vals + [r_vals[0]]
         theta = chosen_names + [chosen_names[0]]
@@ -621,14 +720,16 @@ def page_vergleich(df: pd.DataFrame):
 
     fig_r.update_layout(
         template=PLOTLY_TEMPLATE,
-        polar=dict(
-            radialaxis=dict(visible=True, range=[0, 1]),
-        ),
+        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
         showlegend=True,
         title="Radar: 1.0 = besser (normalisiert)",
     )
     st.plotly_chart(fig_r, use_container_width=True)
 
+
+# -----------------------------
+# Main
+# -----------------------------
 def main():
     st.markdown('<div class="main-header">☘︎ CO₂ Portfolio Calculator</div>', unsafe_allow_html=True)
     st.markdown(
