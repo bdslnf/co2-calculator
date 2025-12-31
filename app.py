@@ -21,16 +21,26 @@ IMAGES_DIR = DATA_DIR / "images"
 GREEN_MAIN = "#2E7D32"
 GREEN_MED = "#66BB6A"
 GREEN_DARK = "#1B5E20"
+GREEN_LIGHT = "#A5D6A7"
+
 WHITE = "#FFFFFF"
 GRAY_900 = "#263238"
+GRAY_700 = "#455A64"
 GRAY_600 = "#607D8B"
 GRAY_100 = "#ECEFF1"
 
 PLOTLY_TEMPLATE = "simple_white"
 
+COLOR_MAP_HEIZUNG = {
+    "Gas": GREEN_DARK,
+    "Fernwärme": GREEN_MAIN,
+    "Wärmepumpe": GREEN_MED,
+    "Öl": GREEN_LIGHT,
+    "Pellets": GREEN_MED,
+    "Solar": GREEN_LIGHT,
+}
 
 st.set_page_config(page_title="CO2 Portfolio Calculator", page_icon="☘︎", layout="wide")
-
 
 st.markdown(
     f"""
@@ -61,7 +71,7 @@ section[data-testid="stSidebar"] {{
 a, a:visited {{ color: {GREEN_MAIN} !important; }}
 a:hover {{ color: {GREEN_DARK} !important; }}
 
-/* Radio */
+/* Radio (Seitenwahl) */
 section[data-testid="stSidebar"] input[type="radio"] {{
   accent-color: {GREEN_MAIN} !important;
 }}
@@ -81,18 +91,29 @@ section[data-testid="stSidebar"] [data-baseweb="tag"] svg {{
   fill: white !important;
 }}
 
-/* Slider */
+/* Slider Thumb */
 section[data-testid="stSidebar"] [data-baseweb="slider"] div[role="slider"] {{
   background: {GREEN_MAIN} !important;
   border-color: {GREEN_MAIN} !important;
 }}
-section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="rgb(255, 75, 75)"] {{
+
+/* Slider Track (Streamlit rot/blau) -> gruen (sehr breit) */
+section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="255, 75, 75"],
+section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="rgb(255, 75, 75)"],
+section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="#ff4b4b"],
+section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="0, 104, 201"],
+section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="rgb(0, 104, 201)"],
+section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="#0068c9"] {{
   background-color: {GREEN_MAIN} !important;
-}}
-section[data-testid="stSidebar"] [data-baseweb="slider"] div[style*="rgb(0, 104, 201)"] {{
-  background-color: {GREEN_MAIN} !important;
+  border-color: {GREEN_MAIN} !important;
 }}
 
+/* Slider Value (rot) -> neutral */
+section[data-testid="stSidebar"] div[data-testid="stSlider"] * {{
+  color: {GRAY_900} !important;
+}}
+
+/* Bild rechts */
 .img-right img {{
   border-radius: 14px;
   object-fit: cover !important;
@@ -157,7 +178,7 @@ def small_image_right(gebaeude_id: str, width: int = 340, height: int = 220):
             f"""
             <div style="
                 width:{width}px;height:{height}px;
-                border:1px dashed #A5D6A7;border-radius:14px;
+                border:1px dashed {GREEN_LIGHT};border-radius:14px;
                 background:#F5F7F6;display:flex;
                 align-items:center;justify-content:center;
                 color:{GRAY_600};font-weight:800;">
@@ -189,15 +210,55 @@ def page_portfolio(df: pd.DataFrame):
     heiz_df = pd.DataFrame(
         [{"Typ": k, "Anzahl": v} for k, v in stats.get("heizungstypen_verteilung", {}).items()]
     )
-    fig = px.pie(
-        heiz_df,
-        values="Anzahl",
-        names="Typ",
-        template=PLOTLY_TEMPLATE,
-        title="Verteilung nach Heizungstyp",
-    )
-    fig.update_traces(textposition="inside", textinfo="percent+label")
-    st.plotly_chart(fig, use_container_width=True)
+    if not heiz_df.empty:
+        fig = px.pie(
+            heiz_df,
+            values="Anzahl",
+            names="Typ",
+            color="Typ",
+            color_discrete_map={t: COLOR_MAP_HEIZUNG.get(t, GREEN_MAIN) for t in heiz_df["Typ"].unique()},
+            template=PLOTLY_TEMPLATE,
+        )
+        fig.update_traces(textposition="inside", textinfo="percent+label")
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("Gebäude (Bilder)")
+    cards_df = df_now.sort_values("emissionen_gesamt_t", ascending=False).reset_index(drop=True)
+
+    cols_per_row = 3
+    total = len(cards_df)
+    rows = (total + cols_per_row - 1) // cols_per_row
+    idx = 0
+
+    for _ in range(rows):
+        cols = st.columns(cols_per_row)
+        for col in cols:
+            if idx >= total:
+                break
+            r = cards_df.iloc[idx]
+            gid = r["gebaeude_id"]
+            with col:
+                with st.container(border=True):
+                    p = find_image_path(gid)
+                    if p:
+                        st.image(str(p), use_container_width=True)
+                    else:
+                        st.markdown(
+                            f"""
+                            <div style="
+                                height:170px;border:1px dashed {GREEN_LIGHT};
+                                border-radius:14px;background:#F5F7F6;
+                                display:flex;align-items:center;justify-content:center;
+                                color:{GRAY_600};font-weight:800;">
+                                Kein Bild
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                    st.markdown(f"### {gid}")
+                    st.write(f"**Heizung:** {r.get('heizung_typ', '-')}")
+                    st.write(f"**Emissionen:** {r.get('emissionen_gesamt_t', 0):.1f} t CO₂e/Jahr")
+            idx += 1
 
 
 def page_gebaeude(df: pd.DataFrame):
@@ -251,13 +312,11 @@ def page_gebaeude(df: pd.DataFrame):
 
     st.sidebar.markdown("### Max. Investition")
 
-    # Text -> Slider
     txt = st.sidebar.text_input("Betrag eingeben [CHF]:", value=format_chf(st.session_state.max_inv))
     val = parse_chf(txt)
     val = max(0, min(2_000_000, val))
     st.session_state.max_inv = val
 
-    # Slider -> Text (bei Änderung)
     slider = st.sidebar.slider("Oder per Slider:", 0, 2_000_000, st.session_state.max_inv, 10_000)
     if slider != st.session_state.max_inv:
         st.session_state.max_inv = slider
@@ -285,7 +344,19 @@ def page_gebaeude(df: pd.DataFrame):
             c3.write(f"**NPV:** CHF {format_chf(row.get('npv_chf', 0))}")
 
     st.subheader("Alle Szenarien")
-    show_cols = [c for c in ["rang", "name", "kategorie", "investition_netto_chf", "amortisation_jahre", "roi_prozent", "npv_chf"] if c in f.columns]
+    show_cols = [
+        c
+        for c in [
+            "rang",
+            "name",
+            "kategorie",
+            "investition_netto_chf",
+            "amortisation_jahre",
+            "roi_prozent",
+            "npv_chf",
+        ]
+        if c in f.columns
+    ]
     st.dataframe(f[show_cols], use_container_width=True)
 
     if len(f) > 0:
@@ -294,12 +365,15 @@ def page_gebaeude(df: pd.DataFrame):
             parameter = st.selectbox(
                 "Szenario",
                 ["energiepreis", "co2_abgabe", "foerderung"],
-                format_func=lambda x: {"energiepreis": "Energiepreis", "co2_abgabe": "CO₂-Abgabe", "foerderung": "Förderung"}[x],
+                format_func=lambda x: {"energiepreis": "Energiepreis", "co2_abgabe": "CO₂-Abgabe", "foerderung": "Förderung"}[
+                    x
+                ],
             )
             sens_df = sensitivitaetsanalyse(top, g, parameter)
-
             fig2 = go.Figure()
-            fig2.add_trace(go.Scatter(x=sens_df["faktor"], y=sens_df["amortisation_jahre"], mode="lines+markers", name="Amortisation"))
+            fig2.add_trace(
+                go.Scatter(x=sens_df["faktor"], y=sens_df["amortisation_jahre"], mode="lines+markers", name="Amortisation")
+            )
             st.plotly_chart(fig2, use_container_width=True)
             st.dataframe(sens_df, use_container_width=True)
 
@@ -321,13 +395,23 @@ def page_vergleich(df: pd.DataFrame):
     cols = [c for c in ["gebaeude_id", "heizung_typ", "jahresverbrauch_kwh", "emissionen_gesamt_t"] if c in vdf.columns]
     st.dataframe(vdf[cols], use_container_width=True)
 
-    fig = px.bar(vdf, x="gebaeude_id", y="emissionen_gesamt_t", color="heizung_typ", template=PLOTLY_TEMPLATE, title="CO₂-Emissionen pro Gebäude")
+    fig = px.bar(
+        vdf,
+        x="gebaeude_id",
+        y="emissionen_gesamt_t",
+        color="heizung_typ",
+        template=PLOTLY_TEMPLATE,
+        title="CO₂-Emissionen pro Gebäude",
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 
 def main():
     st.markdown('<div class="main-header">☘︎ CO₂ Portfolio Calculator</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">HSLU Digital Twin Programmieren | Nicola Beeli & Mattia Rohrer</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="sub-header">HSLU Digital Twin Programmieren | Nicola Beeli & Mattia Rohrer</div>',
+        unsafe_allow_html=True,
+    )
 
     st.sidebar.title("Navigation")
     page = st.sidebar.radio("Seite auswählen", ["Portfolio-Übersicht", "Gebäude-Analyse", "Vergleich"])
